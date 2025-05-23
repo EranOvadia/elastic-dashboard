@@ -294,7 +294,7 @@ class _CoralLevel extends StatelessWidget {
           children: [
             _createIncrementDicrementButton(
                 Icons.remove, Colors.red, () => onValueChanged(-1)),
-            Text("L" + (selected ?? '')),
+            Text("L" + (selected ?? ''), textScaleFactor: 3),
             _createIncrementDicrementButton(
                 Icons.add, Colors.green, () => onValueChanged(1))
           ],
@@ -313,7 +313,7 @@ class _CoralLevel extends StatelessWidget {
       child: Icon(
         icon,
         color: color,
-        size: 12.0,
+        size: 40.0,
       ),
       shape: CircleBorder(),
     );
