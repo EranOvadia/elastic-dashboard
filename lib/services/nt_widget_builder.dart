@@ -1,3 +1,4 @@
+import 'package:elastic_dashboard/widgets/nt_widgets/multi_topic/field3075_widget.dart';
 import 'package:flutter/material.dart';
 
 import 'package:dot_cast/dot_cast.dart';
@@ -213,10 +214,10 @@ class NTWidgetBuilder {
         defaultWidth: 2);
 
     registerWithAlias(
-        names: {FieldWidget.widgetType, 'Field2d'},
-        model: FieldWidgetModel.new,
-        widget: FieldWidget.new,
-        fromJson: FieldWidgetModel.fromJson,
+        names: {Field3075Widget.widgetType, 'Field2d'},
+        model: Field3075WidgetModel.new,
+        widget: Field3075Widget.new,
+        fromJson: Field3075WidgetModel.fromJson,
         minWidth: _normalSize * 2,
         minHeight: _normalSize * 2,
         defaultWidth: 2,
