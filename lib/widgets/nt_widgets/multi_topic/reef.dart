@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:math';
+import 'dart:math' as math;
 
 import 'package:dot_cast/dot_cast.dart';
 import 'package:provider/provider.dart';
@@ -16,7 +16,7 @@ class ReefConstants {
   static const int edgeButtons = 6;
   static const int buttonsPerFace = 6;
   static const int facesCount = 6;
-  static const double globalRotation = pi / 6;
+  static const double globalRotation = math.pi / 6;
 
   // Color scheme
   static const Color hexagonColor = Color.fromARGB(255, 100, 2, 93);
@@ -112,7 +112,7 @@ class ReefModel extends MultiTopicNTWidgetModel {
   String type = ReefConstants.widgetType;
 
   // Topic names - computed properties for cleaner access
-  String get branchsTopicName => '/reeftalbe/branchs';
+  String get branchsTopicName => '/reef/branchs';
   String get optionsTopicName => '$topic/options';
   String get selectedTopicName => '$topic/selected';
   String get activeTopicName => '$topic/active';
@@ -146,6 +146,9 @@ class ReefModel extends MultiTopicNTWidgetModel {
   final Set<int> _selectedButtonIndices = <int>{};
   NT4Topic? _selectedTopic;
   bool _sortOptions = false;
+
+  // Cache for published topics to avoid re-publishing
+  final Map<String, NT4Topic> _publishedTopics = {};
 
   // Getters for encapsulation
   String? get previousDefault => _previousDefault;
@@ -192,6 +195,82 @@ class ReefModel extends MultiTopicNTWidgetModel {
         getButtonStatus(buttonIndex) == ButtonStatus.active;
   }
 
+  // FIXED: Improved method to get or create topics
+  NT4Topic _getOrCreateTopic(String topicName, String dataType,
+      {Map<String, dynamic>? properties}) {
+    // Check cache first
+    if (_publishedTopics.containsKey(topicName)) {
+      return _publishedTopics[topicName]!;
+    }
+
+    // Check if topic already exists in NT4
+    NT4Topic? existingTopic = ntConnection.getTopicFromName(topicName);
+
+    if (existingTopic != null) {
+      // Topic exists, just update properties if needed
+      if (properties != null) {
+        existingTopic.properties.addAll(properties);
+        // Re-publish to ensure properties are applied
+        ntConnection.publishTopic(existingTopic);
+      }
+      _publishedTopics[topicName] = existingTopic;
+      debugPrint('Using existing topic: $topicName');
+      return existingTopic;
+    }
+
+    // Create new topic
+    final newTopic = ntConnection.publishNewTopic(
+      topicName,
+      dataType,
+      properties: properties ?? {'retained': true},
+    );
+
+    _publishedTopics[topicName] = newTopic;
+    debugPrint('Created new topic: $topicName');
+    return newTopic;
+  }
+
+  // FIXED: Improved button modes array sending
+  void sendButtonsModesArray() {
+    if (!ntConnection.isNT4Connected) {
+      debugPrint('Cannot send: NT4 not connected');
+      return;
+    }
+
+    const topicName = '/reef/dashboardbranchs';
+    print("Should send");
+
+    try {
+      // Create list of modes for all 42 buttons
+      final List<int> buttonModes = List<int>.generate(
+        ReefConstants.totalButtons,
+        (index) => getButtonStatus(index).value,
+      );
+
+      final topic = _getOrCreateTopic(topicName, NT4TypeStr.kIntArr);
+      ntConnection.updateDataFromTopic(topic, buttonModes);
+      debugPrint('Sent button modes array: $buttonModes');
+    } catch (e) {
+      debugPrint('Error sending button modes array: $e');
+    }
+  }
+
+  // FIXED: Improved branch status publishing
+  void _publishBranchStatus(List<dynamic> branchList) {
+    if (!ntConnection.isNT4Connected) {
+      debugPrint('Cannot publish: NT4 not connected');
+      return;
+    }
+
+    try {
+      final topic = _getOrCreateTopic(branchsTopicName, NT4TypeStr.kIntArr);
+      ntConnection.updateDataFromTopic(topic, branchList);
+      debugPrint('Published branch status to: $branchsTopicName');
+    } catch (e) {
+      debugPrint('Error publishing branch status: $e');
+    }
+  }
+
   // Constructors
   ReefModel({
     required super.ntConnection,
@@ -229,11 +308,19 @@ class ReefModel extends MultiTopicNTWidgetModel {
     // Reset state
     _resetState();
     _onChooserStateUpdate();
+
+    // FIXED: Send initialization message with improved error handling
+    // try {
+    //   sendToMessagesTable('Reef widget connected and initialized');
+    // } catch (e) {
+    //   debugPrint('Error sending initialization message: $e');
+    // }
   }
 
   @override
   void resetSubscription() {
     _selectedTopic = null;
+    _publishedTopics.clear(); // Clear the topic cache
     chooserStateListenable.removeListener(_onChooserStateUpdate);
     super.resetSubscription();
   }
@@ -322,36 +409,28 @@ class ReefModel extends MultiTopicNTWidgetModel {
   void _publishSelectedTopic() {
     if (_selectedTopic != null) return;
 
-    final existing = ntConnection.getTopicFromName(selectedTopicName);
-
-    if (existing != null) {
-      existing.properties.addAll({'retained': true});
-      ntConnection.publishTopic(existing);
-      _selectedTopic = existing;
-    } else {
-      _selectedTopic = ntConnection.publishNewTopic(
-        selectedTopicName,
-        NT4TypeStr.kString,
-        properties: {'retained': true},
-      );
+    try {
+      _selectedTopic = _getOrCreateTopic(selectedTopicName, NT4TypeStr.kString);
+    } catch (e) {
+      debugPrint('Error publishing selected topic: $e');
     }
   }
 
   void _publishSelectedValue(String? selected, [bool initial = false]) {
     if (selected == null || !ntConnection.isNT4Connected) return;
 
-    _selectedTopic ??= _createSelectedTopic();
+    try {
+      _selectedTopic ??=
+          _getOrCreateTopic(selectedTopicName, NT4TypeStr.kString);
 
-    ntConnection.updateDataFromTopic(
-      _selectedTopic!,
-      selected,
-      initial ? 0 : null,
-    );
-  }
-
-  NT4Topic _createSelectedTopic() {
-    _publishSelectedTopic();
-    return _selectedTopic!;
+      ntConnection.updateDataFromTopic(
+        _selectedTopic!,
+        selected,
+        initial ? 0 : null,
+      );
+    } catch (e) {
+      debugPrint('Error publishing selected value: $e');
+    }
   }
 
   // Public methods
@@ -363,6 +442,17 @@ class ReefModel extends MultiTopicNTWidgetModel {
 
     _updateButtonStatus(index, newStatus.value);
     _currentOptionIndex = index;
+
+    // Send message when button is pressed
+    try {
+      // sendToMessagesTable(
+      //     'Button $index pressed - Status changed to ${newStatus.name}');
+
+      // AUTO-SEND: Update the array every time a button is pressed
+      sendButtonsModesArray();
+    } catch (e) {
+      debugPrint('Error in selectOptionByIndex: $e');
+    }
 
     // Publish value if within options range
     if (_previousOptions != null && index < _previousOptions!.length) {
@@ -394,20 +484,18 @@ class ReefModel extends MultiTopicNTWidgetModel {
     branchList[buttonIndex] = newStatus;
 
     if (ntConnection.isNT4Connected) {
-      _publishBranchStatus(branchList);
-      debugPrint('Updated button $buttonIndex to status $newStatus');
+      try {
+        _publishBranchStatus(branchList);
+        debugPrint('Updated button $buttonIndex to status $newStatus');
+
+        // Send modes array after updating branch status
+        Future.microtask(() {
+          sendButtonsModesArray();
+        });
+      } catch (e) {
+        debugPrint('Error updating button status: $e');
+      }
     }
-  }
-
-  void _publishBranchStatus(List<dynamic> branchList) {
-    NT4Topic? branchTopic = ntConnection.getTopicFromName(branchsTopicName);
-
-    branchTopic ??= ntConnection.publishNewTopic(
-      branchsTopicName,
-      NT4TypeStr.kIntArr,
-    );
-
-    ntConnection.updateDataFromTopic(branchTopic, branchList);
   }
 }
 
@@ -459,7 +547,8 @@ class _HexagonWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final size = min(constraints.maxWidth, constraints.maxHeight) * 0.5;
+        final size =
+            math.min(constraints.maxWidth, constraints.maxHeight) * 0.5;
         return Center(
           child: CustomPaint(
             size: Size(size, size),
@@ -481,7 +570,7 @@ class _HexagonPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = min(size.width, size.height) / 2;
+    final radius = math.min(size.width, size.height) / 2;
 
     _drawHexagon(canvas, paint, center, radius);
     _drawCenterDot(canvas, center, size);
@@ -490,13 +579,15 @@ class _HexagonPainter extends CustomPainter {
   void _drawHexagon(Canvas canvas, Paint paint, Offset center, double radius) {
     canvas.save();
     canvas.translate(center.dx, center.dy);
-    canvas.rotate(pi / 2);
+    canvas.rotate(math.pi / 2);
 
-    final path = Path()..moveTo(radius * cos(-pi / 6), radius * sin(-pi / 6));
+    final path = Path()
+      ..moveTo(
+          radius * math.cos(-math.pi / 6), radius * math.sin(-math.pi / 6));
 
     for (int i = 0; i < 6; i++) {
-      final angle = i * pi / 3 + -pi / 6;
-      path.lineTo(radius * cos(angle), radius * sin(angle));
+      final angle = i * math.pi / 3 + -math.pi / 6;
+      path.lineTo(radius * math.cos(angle), radius * math.sin(angle));
     }
 
     path.close();
@@ -506,7 +597,7 @@ class _HexagonPainter extends CustomPainter {
 
   void _drawCenterDot(Canvas canvas, Offset center, Size size) {
     final centerPaint = Paint()..color = ReefConstants.hexagonColor;
-    final dotRadius = min(size.width, size.height) * 0.025;
+    final dotRadius = math.min(size.width, size.height) * 0.025;
     canvas.drawCircle(center, dotRadius, centerPaint);
   }
 
@@ -569,11 +660,13 @@ class _ButtonLayout extends StatelessWidget {
 
   List<Widget> _buildFaceButtons(_LayoutConfig config) {
     return List.generate(ReefConstants.facesCount, (face) {
-      final angle =
-          -pi / 2 + face * (pi / 3) + pi / 6 + ReefConstants.globalRotation;
+      final angle = -math.pi / 2 +
+          face * (math.pi / 3) +
+          math.pi / 6 +
+          ReefConstants.globalRotation;
       final position = Offset(
-        config.offsetFromCenter * cos(angle),
-        config.offsetFromCenter * sin(angle),
+        config.offsetFromCenter * math.cos(angle),
+        config.offsetFromCenter * math.sin(angle),
       );
 
       return Transform.translate(
@@ -594,10 +687,10 @@ class _ButtonLayout extends StatelessWidget {
 
   List<Widget> _buildEdgeButtons(_LayoutConfig config) {
     return List.generate(ReefConstants.edgeButtons, (edgeButton) {
-      final angle = (edgeButton * pi / 3) + ReefConstants.globalRotation;
+      final angle = (edgeButton * math.pi / 3) + ReefConstants.globalRotation;
       final position = Offset(
-        config.hexagonRadius * cos(angle),
-        config.hexagonRadius * sin(angle),
+        config.hexagonRadius * math.cos(angle),
+        config.hexagonRadius * math.sin(angle),
       );
       final buttonIndex = ReefConstants.faceButtons + edgeButton;
 
@@ -621,11 +714,13 @@ class _LayoutConfig {
   final double hexagonRadius;
 
   _LayoutConfig(BoxConstraints constraints)
-      : widgetSize = min(constraints.maxWidth, constraints.maxHeight),
-        buttonSize = min(constraints.maxWidth, constraints.maxHeight) * 0.08,
+      : widgetSize = math.min(constraints.maxWidth, constraints.maxHeight),
+        buttonSize =
+            math.min(constraints.maxWidth, constraints.maxHeight) * 0.08,
         offsetFromCenter =
-            min(constraints.maxWidth, constraints.maxHeight) * 0.38,
-        hexagonRadius = min(constraints.maxWidth, constraints.maxHeight) * 0.15;
+            math.min(constraints.maxWidth, constraints.maxHeight) * 0.38,
+        hexagonRadius =
+            math.min(constraints.maxWidth, constraints.maxHeight) * 0.15;
 }
 
 class _FaceButtonGrid extends StatelessWidget {
