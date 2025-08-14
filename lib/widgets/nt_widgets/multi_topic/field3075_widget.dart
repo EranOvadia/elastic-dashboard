@@ -1,7 +1,7 @@
-import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:elastic_dashboard/services/struct_schemas/pose2d_struct.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
@@ -12,7 +12,6 @@ import 'package:vector_math/vector_math_64.dart' show radians;
 
 import 'package:elastic_dashboard/services/field_images.dart';
 import 'package:elastic_dashboard/services/nt4_client.dart';
-import 'package:elastic_dashboard/services/struct_schemas/pose2d_struct.dart';
 import 'package:elastic_dashboard/services/text_formatter_builder.dart';
 import 'package:elastic_dashboard/widgets/dialog_widgets/dialog_color_picker.dart';
 import 'package:elastic_dashboard/widgets/dialog_widgets/dialog_dropdown_chooser.dart';
@@ -538,6 +537,8 @@ class Field3075Widget extends NTWidget {
     Matrix4 transform = Matrix4.translationValues(xFromCenter, yFromCenter, 0.0)
       ..rotateZ(-angleRadians);
 
+    print('robot width ${0.125 * min(width, length)}');
+
     Widget otherObject = Container(
       alignment: Alignment.center,
       constraints: const BoxConstraints(
@@ -722,6 +723,32 @@ class Field3075Widget extends NTWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        List<Object?> robotPositionRaw =
+                model.robotSubscription.value?.tryCast<List<Object?>>() ?? [];
+
+            double robotX = 0;
+            double robotY = 0;
+            double robotTheta = 0;
+
+            if (model.isPoseStruct(model.robotTopicName)) {
+              List<int> poseBytes = robotPositionRaw.whereType<int>().toList();
+              Pose2dStruct poseStruct =
+                  Pose2dStruct.valueFromBytes(Uint8List.fromList(poseBytes));
+
+              robotX = poseStruct.x;
+              robotY = poseStruct.y;
+              robotTheta = poseStruct.angle;
+            } else {
+              List<double> robotPosition =
+                  robotPositionRaw.whereType<double>().toList();
+
+              if (robotPosition.length >= 3) {
+                robotX = robotPosition[0];
+                robotY = robotPosition[1];
+                robotTheta = radians(robotPosition[2]);
+              }
+            }
+
         // #region Rotation fix size
         Size size = Size(constraints.maxWidth, constraints.maxHeight);
         model.widgetSize = size;
@@ -765,21 +792,21 @@ class Field3075Widget extends NTWidget {
           objectSize: Size(model.robotWidthMeters, model.robotLengthMeters),
         );
 
-        List<Widget> corals = [];
-        corals.add(_getTransformedFieldCoral(model,
-            x: 2,
-            y: 2,
-            angleRadians: 0,
-            fieldCenter: fieldCenter,
-            scaleReduction: scaleReduction));
+        // List<Widget> corals = [];
+        // corals.add(_getTransformedFieldCoral(model,
+        //     x: 2,
+        //     y: 2,
+        //     angleRadians: 0,
+        //     fieldCenter: fieldCenter,
+        //     scaleReduction: scaleReduction));
 
-        List<Widget> algeas = [];
-        algeas.add(_getTransformedFieldAlgea(model,
-            x: 2,
-            y: 4,
-            angleRadians: 0,
-            fieldCenter: fieldCenter,
-            scaleReduction: scaleReduction));
+        // List<Widget> algeas = [];
+        // algeas.add(_getTransformedFieldAlgea(model,
+        //     x: 2,
+        //     y: 4,
+        //     angleRadians: 0,
+        //     fieldCenter: fieldCenter,
+        //     scaleReduction: scaleReduction));
 
 
         return ListenableBuilder(
@@ -799,8 +826,8 @@ class Field3075Widget extends NTWidget {
                       child: child!,
                     ),
                     robot,
-                    ...corals,
-                    ...algeas
+                    // ...corals,
+                    // ...algeas
                   ],
                 ),
               ),
@@ -889,4 +916,5 @@ class TrajectoryPainter extends CustomPainter {
         oldDelegate.strokeWidth != strokeWidth ||
         oldDelegate.color != color;
   }
+  
 }
