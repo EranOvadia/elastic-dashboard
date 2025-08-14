@@ -68,7 +68,7 @@ class Field3075WidgetModel extends MultiTopicNTWidgetModel {
 
   double _fieldRotation = 0.0;
 
-  Color _robotColor = Colors.deepPurpleAccent;
+  Color _robotColor = Colors.deepPurple;
   Color _trajectoryColor = Colors.white;
 
   final double _otherObjectSize = 0.55;
@@ -152,10 +152,10 @@ class Field3075WidgetModel extends MultiTopicNTWidgetModel {
     String? fieldGame,
     bool showOtherObjects = true,
     bool showTrajectories = true,
-    double robotWidthMeters = 0.85,
-    double robotLengthMeters = 0.85,
+    double robotWidthMeters = 0.90,
+    double robotLengthMeters = 0.90,
     double fieldRotation = 0.0,
-    Color robotColor = Colors.red,
+    Color robotColor = Colors.deepPurple,
     Color trajectoryColor = Colors.white,
     super.dataType,
     super.period,
@@ -194,7 +194,7 @@ class Field3075WidgetModel extends MultiTopicNTWidgetModel {
     _fieldRotation = tryCast(jsonData['field_rotation']) ?? 0.0;
 
     _robotColor = Color(
-      tryCast(jsonData['robot_color']) ?? Colors.red.toARGB32(),
+      tryCast(jsonData['robot_color']) ?? Colors.deepPurple.toARGB32(),
     );
     _trajectoryColor = Color(
       tryCast(jsonData['trajectory_color']) ?? Colors.white.toARGB32(),
