@@ -8,7 +8,7 @@ import 'package:elastic_dashboard/services/nt4_client.dart';
 import 'package:elastic_dashboard/widgets/dialog_widgets/dialog_toggle_switch.dart';
 import 'package:elastic_dashboard/widgets/nt_widgets/nt_widget.dart';
 
-// Constants for better maintainability
+// Constants for the hexagonal button layout
 class ReefConstants {
   static const String widgetType = 'Reef';
   static const int totalButtons = 42;
@@ -18,12 +18,12 @@ class ReefConstants {
   static const int facesCount = 6;
   static const double globalRotation = math.pi / 6;
 
-  // Color scheme
+  // Visual styling
   static const Color hexagonColor = Color.fromARGB(255, 100, 2, 93);
   static const double hexagonStrokeWidth = 5.0;
 }
 
-// Button status enum for better type safety
+// Button states for the reef interface
 enum ButtonStatus {
   normal(0),
   active(1),
@@ -52,7 +52,7 @@ enum ButtonStatus {
   }
 }
 
-// Immutable color configuration
+// Color schemes for different button types and states
 @immutable
 class ButtonColorScheme {
   final Color? background;
@@ -65,7 +65,7 @@ class ButtonColorScheme {
     this.border,
   });
 
-  // Face button color schemes
+  // Color schemes for face buttons (inner hexagon buttons)
   static const Map<ButtonStatus, ButtonColorScheme> faceColors = {
     ButtonStatus.normal: ButtonColorScheme(),
     ButtonStatus.active: ButtonColorScheme(
@@ -82,7 +82,7 @@ class ButtonColorScheme {
     ),
   };
 
-  // Edge button color schemes
+  // Color schemes for edge buttons (outer hexagon vertices)
   static final Map<ButtonStatus, ButtonColorScheme> edgeColors = {
     ButtonStatus.normal: ButtonColorScheme(
       background: Colors.transparent,
@@ -111,63 +111,21 @@ class ReefModel extends MultiTopicNTWidgetModel {
   @override
   String type = ReefConstants.widgetType;
 
-  // Topic names - computed properties for cleaner access
+  // NetworkTables topic paths
   String get branchsTopicName => '/reef/branchs';
-  String get optionsTopicName => '$topic/options';
-  String get selectedTopicName => '$topic/selected';
-  String get activeTopicName => '$topic/active';
-  String get defaultTopicName => '$topic/default';
 
-  // Subscriptions
+  // NT4 subscriptions
   late NT4Subscription branchesSub;
-  late NT4Subscription optionsSubscription;
-  late NT4Subscription selectedSubscription;
-  late NT4Subscription activeSubscription;
-  late NT4Subscription defaultSubscription;
 
   @override
-  List<NT4Subscription> get subscriptions => [
-        branchesSub,
-        optionsSubscription,
-        selectedSubscription,
-        activeSubscription,
-        defaultSubscription,
-      ];
+  List<NT4Subscription> get subscriptions => [branchesSub];
 
   late Listenable chooserStateListenable;
-  final TextEditingController _searchController = TextEditingController();
 
-  // State variables
-  String? _previousDefault;
-  String? _previousSelected;
-  String? _previousActive;
-  List<String>? _previousOptions;
-  int _currentOptionIndex = 0;
-  final Set<int> _selectedButtonIndices = <int>{};
-  NT4Topic? _selectedTopic;
-  bool _sortOptions = false;
-
-  // Cache for published topics to avoid re-publishing
+  // State management
   final Map<String, NT4Topic> _publishedTopics = {};
 
-  // Getters for encapsulation
-  String? get previousDefault => _previousDefault;
-  String? get previousSelected => _previousSelected;
-  String? get previousActive => _previousActive;
-  List<String>? get previousOptions => _previousOptions;
-  Set<int> get selectedButtonIndices => Set.from(_selectedButtonIndices);
-  TextEditingController get searchController => _searchController;
-
-  bool get sortOptions => _sortOptions;
-  set sortOptions(bool value) {
-    if (_sortOptions != value) {
-      _sortOptions = value;
-      _previousOptions?.sort();
-      refresh();
-    }
-  }
-
-  // Enhanced button status retrieval with better error handling
+  // Get button status from NetworkTables data
   ButtonStatus getButtonStatus(int buttonIndex) {
     if (buttonIndex < 0 || buttonIndex >= ReefConstants.totalButtons) {
       return ButtonStatus.normal;
@@ -189,13 +147,7 @@ class ReefModel extends MultiTopicNTWidgetModel {
     return ButtonStatus.fromInt(intValue);
   }
 
-  // Legacy support method
-  bool isButtonPressed(int buttonIndex) {
-    return _selectedButtonIndices.contains(buttonIndex) ||
-        getButtonStatus(buttonIndex) == ButtonStatus.active;
-  }
-
-  // FIXED: Improved method to get or create topics
+  // Get or create NetworkTables topics with caching
   NT4Topic _getOrCreateTopic(String topicName, String dataType,
       {Map<String, dynamic>? properties}) {
     // Check cache first
@@ -203,18 +155,15 @@ class ReefModel extends MultiTopicNTWidgetModel {
       return _publishedTopics[topicName]!;
     }
 
-    // Check if topic already exists in NT4
+    // Check existing topics in NT4
     NT4Topic? existingTopic = ntConnection.getTopicFromName(topicName);
 
     if (existingTopic != null) {
-      // Topic exists, just update properties if needed
       if (properties != null) {
         existingTopic.properties.addAll(properties);
-        // Re-publish to ensure properties are applied
         ntConnection.publishTopic(existingTopic);
       }
       _publishedTopics[topicName] = existingTopic;
-      debugPrint('Using existing topic: $topicName');
       return existingTopic;
     }
 
@@ -226,22 +175,18 @@ class ReefModel extends MultiTopicNTWidgetModel {
     );
 
     _publishedTopics[topicName] = newTopic;
-    debugPrint('Created new topic: $topicName');
     return newTopic;
   }
 
-  // FIXED: Improved button modes array sending
+  // Send current button states to dashboard topic
   void sendButtonsModesArray() {
     if (!ntConnection.isNT4Connected) {
-      debugPrint('Cannot send: NT4 not connected');
       return;
     }
 
     const topicName = '/reef/dashboardbranchs';
-    print("Should send");
 
     try {
-      // Create list of modes for all 42 buttons
       final List<int> buttonModes = List<int>.generate(
         ReefConstants.totalButtons,
         (index) => getButtonStatus(index).value,
@@ -249,23 +194,20 @@ class ReefModel extends MultiTopicNTWidgetModel {
 
       final topic = _getOrCreateTopic(topicName, NT4TypeStr.kIntArr);
       ntConnection.updateDataFromTopic(topic, buttonModes);
-      debugPrint('Sent button modes array: $buttonModes');
     } catch (e) {
       debugPrint('Error sending button modes array: $e');
     }
   }
 
-  // FIXED: Improved branch status publishing
+  // Publish branch status array to NetworkTables
   void _publishBranchStatus(List<dynamic> branchList) {
     if (!ntConnection.isNT4Connected) {
-      debugPrint('Cannot publish: NT4 not connected');
       return;
     }
 
     try {
       final topic = _getOrCreateTopic(branchsTopicName, NT4TypeStr.kIntArr);
       ntConnection.updateDataFromTopic(topic, branchList);
-      debugPrint('Published branch status to: $branchsTopicName');
     } catch (e) {
       debugPrint('Error publishing branch status: $e');
     }
@@ -276,164 +218,42 @@ class ReefModel extends MultiTopicNTWidgetModel {
     required super.ntConnection,
     required super.preferences,
     required super.topic,
-    bool sortOptions = false,
     super.dataType,
     super.period,
-  })  : _sortOptions = sortOptions,
-        super();
+  }) : super();
 
   ReefModel.fromJson({
     required super.ntConnection,
     required super.preferences,
     required Map<String, dynamic> jsonData,
-  }) : super.fromJson(jsonData: jsonData) {
-    _sortOptions = tryCast(jsonData['sort_options']) ?? _sortOptions;
-  }
+  }) : super.fromJson(jsonData: jsonData);
 
   @override
   void initializeSubscriptions() {
-    // Initialize all subscriptions
     branchesSub = ntConnection.subscribe(branchsTopicName, super.period);
-    optionsSubscription =
-        ntConnection.subscribe(optionsTopicName, super.period);
-    selectedSubscription =
-        ntConnection.subscribe(selectedTopicName, super.period);
-    activeSubscription = ntConnection.subscribe(activeTopicName, super.period);
-    defaultSubscription =
-        ntConnection.subscribe(defaultTopicName, super.period);
-
     chooserStateListenable = Listenable.merge(subscriptions);
-    chooserStateListenable.addListener(_onChooserStateUpdate);
-
-    // Reset state
-    _resetState();
-    _onChooserStateUpdate();
-
-    // FIXED: Send initialization message with improved error handling
-    // try {
-    //   sendToMessagesTable('Reef widget connected and initialized');
-    // } catch (e) {
-    //   debugPrint('Error sending initialization message: $e');
-    // }
+    chooserStateListenable.addListener(_onStateUpdate);
+    _onStateUpdate();
   }
 
   @override
   void resetSubscription() {
-    _selectedTopic = null;
-    _publishedTopics.clear(); // Clear the topic cache
-    chooserStateListenable.removeListener(_onChooserStateUpdate);
+    _publishedTopics.clear();
+    chooserStateListenable.removeListener(_onStateUpdate);
     super.resetSubscription();
   }
 
   @override
-  Map<String, dynamic> toJson() {
-    return {
-      ...super.toJson(),
-      'sort_options': _sortOptions,
-    };
-  }
-
-  @override
   List<Widget> getEditProperties(BuildContext context) {
-    return [
-      DialogToggleSwitch(
-        label: 'Sort Options Alphabetically',
-        initialValue: _sortOptions,
-        onToggle: (value) => sortOptions = value,
-      ),
-    ];
+    return [];
   }
 
-  // Private helper methods
-  void _resetState() {
-    _previousOptions = null;
-    _previousActive = null;
-    _previousDefault = null;
-    _previousSelected = null;
-    _selectedButtonIndices.clear();
-  }
-
-  void _onChooserStateUpdate() {
-    // Process options
-    final rawOptions = optionsSubscription.value?.tryCast<List<Object?>>();
-    List<String>? currentOptions = rawOptions?.whereType<String>().toList();
-
-    if (sortOptions && currentOptions != null) {
-      currentOptions.sort();
-    }
-
-    // Process other values with null safety
-    final currentActive = _processStringValue(activeSubscription.value);
-    final currentSelected = _processStringValue(selectedSubscription.value);
-    final currentDefault = _processStringValue(defaultSubscription.value);
-
-    final hasValue = currentOptions != null ||
-        currentActive != null ||
-        currentDefault != null;
-
-    final shouldPublishCurrent =
-        hasValue && _previousSelected != null && currentSelected == null;
-
-    if (hasValue) {
-      _publishSelectedTopic();
-    }
-
-    // Update state
-    _updateState(
-        currentOptions, currentSelected, currentActive, currentDefault);
-
-    if (shouldPublishCurrent) {
-      _publishSelectedValue(_previousSelected, true);
-    }
-
+  // Handle state updates from NetworkTables
+  void _onStateUpdate() {
     notifyListeners();
   }
 
-  String? _processStringValue(dynamic value) {
-    final stringValue = tryCast<String>(value);
-    return (stringValue?.isEmpty ?? true) ? null : stringValue;
-  }
-
-  void _updateState(
-    List<String>? options,
-    String? selected,
-    String? active,
-    String? defaultValue,
-  ) {
-    if (options != null) _previousOptions = options;
-    if (selected != null) _previousSelected = selected;
-    if (active != null) _previousActive = active;
-    if (defaultValue != null) _previousDefault = defaultValue;
-  }
-
-  void _publishSelectedTopic() {
-    if (_selectedTopic != null) return;
-
-    try {
-      _selectedTopic = _getOrCreateTopic(selectedTopicName, NT4TypeStr.kString);
-    } catch (e) {
-      debugPrint('Error publishing selected topic: $e');
-    }
-  }
-
-  void _publishSelectedValue(String? selected, [bool initial = false]) {
-    if (selected == null || !ntConnection.isNT4Connected) return;
-
-    try {
-      _selectedTopic ??=
-          _getOrCreateTopic(selectedTopicName, NT4TypeStr.kString);
-
-      ntConnection.updateDataFromTopic(
-        _selectedTopic!,
-        selected,
-        initial ? 0 : null,
-      );
-    } catch (e) {
-      debugPrint('Error publishing selected value: $e');
-    }
-  }
-
-  // Public methods
+  // Handle button press - cycle through states
   void selectOptionByIndex(int index) {
     if (!_isValidButtonIndex(index)) return;
 
@@ -441,24 +261,7 @@ class ReefModel extends MultiTopicNTWidgetModel {
     final newStatus = currentStatus.getNextStatus();
 
     _updateButtonStatus(index, newStatus.value);
-    _currentOptionIndex = index;
-
-    // Send message when button is pressed
-    try {
-      // sendToMessagesTable(
-      //     'Button $index pressed - Status changed to ${newStatus.name}');
-
-      // AUTO-SEND: Update the array every time a button is pressed
-      sendButtonsModesArray();
-    } catch (e) {
-      debugPrint('Error in selectOptionByIndex: $e');
-    }
-
-    // Publish value if within options range
-    if (_previousOptions != null && index < _previousOptions!.length) {
-      _publishSelectedValue(_previousOptions![index]);
-    }
-
+    sendButtonsModesArray();
     notifyListeners();
   }
 
@@ -466,6 +269,7 @@ class ReefModel extends MultiTopicNTWidgetModel {
     return index >= 0 && index < ReefConstants.totalButtons;
   }
 
+  // Update individual button status
   void _updateButtonStatus(int buttonIndex, int newStatus) {
     final currentBranchData = branchesSub.value;
     List<dynamic> branchList;
@@ -486,12 +290,7 @@ class ReefModel extends MultiTopicNTWidgetModel {
     if (ntConnection.isNT4Connected) {
       try {
         _publishBranchStatus(branchList);
-        debugPrint('Updated button $buttonIndex to status $newStatus');
-
-        // Send modes array after updating branch status
-        Future.microtask(() {
-          sendButtonsModesArray();
-        });
+        Future.microtask(() => sendButtonsModesArray());
       } catch (e) {
         debugPrint('Error updating button status: $e');
       }
@@ -507,14 +306,10 @@ class Reef extends NTWidget {
   @override
   Widget build(BuildContext context) {
     final model = context.watch<NTWidgetModel>() as ReefModel;
-    final preview = model.previousSelected ?? model.previousDefault;
 
     return ListenableBuilder(
-      listenable: Listenable.merge([
-        model.branchesSub,
-        model.chooserStateListenable,
-      ]),
-      builder: (context, child) => Transform.scale(scale: 1, child: child),
+      listenable: model.branchesSub,
+      builder: (context, child) => child!,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -527,7 +322,6 @@ class Reef extends NTWidget {
                 const _HexagonWidget(),
                 _ButtonGridWidget(
                   model: model,
-                  preview: preview,
                   onOptionSelected: model.selectOptionByIndex,
                 ),
               ],
@@ -540,6 +334,7 @@ class Reef extends NTWidget {
   }
 }
 
+// Draws the central hexagon outline
 class _HexagonWidget extends StatelessWidget {
   const _HexagonWidget();
 
@@ -560,6 +355,7 @@ class _HexagonWidget extends StatelessWidget {
   }
 }
 
+// Custom painter for hexagon with center dot
 class _HexagonPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
@@ -605,14 +401,13 @@ class _HexagonPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
+// Container for all buttons in the hexagonal layout
 class _ButtonGridWidget extends StatelessWidget {
   final ReefModel model;
-  final String? preview;
   final Function(int) onOptionSelected;
 
   const _ButtonGridWidget({
     required this.model,
-    required this.preview,
     required this.onOptionSelected,
   });
 
@@ -630,6 +425,7 @@ class _ButtonGridWidget extends StatelessWidget {
   }
 }
 
+// Manages the positioning of face and edge buttons
 class _ButtonLayout extends StatelessWidget {
   final ReefModel model;
   final BoxConstraints constraints;
@@ -658,6 +454,7 @@ class _ButtonLayout extends StatelessWidget {
     );
   }
 
+  // Create 6 faces of buttons around the hexagon
   List<Widget> _buildFaceButtons(_LayoutConfig config) {
     return List.generate(ReefConstants.facesCount, (face) {
       final angle = -math.pi / 2 +
@@ -685,6 +482,7 @@ class _ButtonLayout extends StatelessWidget {
     });
   }
 
+  // Create 6 edge buttons at hexagon vertices
   List<Widget> _buildEdgeButtons(_LayoutConfig config) {
     return List.generate(ReefConstants.edgeButtons, (edgeButton) {
       final angle = (edgeButton * math.pi / 3) + ReefConstants.globalRotation;
@@ -707,6 +505,7 @@ class _ButtonLayout extends StatelessWidget {
   }
 }
 
+// Layout configuration for button positioning and sizing
 class _LayoutConfig {
   final double widgetSize;
   final double buttonSize;
@@ -723,6 +522,7 @@ class _LayoutConfig {
             math.min(constraints.maxWidth, constraints.maxHeight) * 0.15;
 }
 
+// 2x3 grid of buttons for each hexagon face
 class _FaceButtonGrid extends StatelessWidget {
   final int faceIndex;
   final _LayoutConfig config;
@@ -763,6 +563,7 @@ class _FaceButtonGrid extends StatelessWidget {
   }
 }
 
+// Individual button on a hexagon face
 class _FaceButton extends StatelessWidget {
   final int buttonIndex;
   final _LayoutConfig config;
@@ -803,6 +604,7 @@ class _FaceButton extends StatelessWidget {
   }
 }
 
+// Button positioned at hexagon vertex
 class _EdgeButton extends StatelessWidget {
   final int buttonIndex;
   final _LayoutConfig config;
