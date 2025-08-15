@@ -3,12 +3,12 @@ import 'dart:math' as math;
 
 import 'package:dot_cast/dot_cast.dart';
 import 'package:provider/provider.dart';
-
 import 'package:elastic_dashboard/services/nt4_client.dart';
 import 'package:elastic_dashboard/widgets/dialog_widgets/dialog_toggle_switch.dart';
 import 'package:elastic_dashboard/widgets/nt_widgets/nt_widget.dart';
+import 'ReefButtonsStates.dart';
 
-// Constants for the hexagonal button layout
+// Constants for the hexagonal button layout3
 class ReefConstants {
   static const String widgetType = 'Reef';
   static const int totalButtons = 42;
@@ -24,88 +24,6 @@ class ReefConstants {
 }
 
 // Button states for the reef interface
-enum ButtonStatus {
-  normal(0),
-  active(1),
-  warning(2),
-  success(3);
-
-  const ButtonStatus(this.value);
-  final int value;
-
-  static ButtonStatus fromInt(int value) {
-    return ButtonStatus.values.firstWhere(
-      (status) => status.value == value,
-      orElse: () => ButtonStatus.normal,
-    );
-  }
-
-  ButtonStatus getNextStatus() {
-    switch (this) {
-      case ButtonStatus.active:
-        return ButtonStatus.normal;
-      case ButtonStatus.normal:
-      case ButtonStatus.warning:
-      case ButtonStatus.success:
-        return ButtonStatus.active;
-    }
-  }
-}
-
-// Color schemes for different button types and states
-@immutable
-class ButtonColorScheme {
-  final Color? background;
-  final Color? text;
-  final Color? border;
-
-  const ButtonColorScheme({
-    this.background,
-    this.text,
-    this.border,
-  });
-
-  // Color schemes for face buttons (inner hexagon buttons)
-  static const Map<ButtonStatus, ButtonColorScheme> faceColors = {
-    ButtonStatus.normal: ButtonColorScheme(),
-    ButtonStatus.active: ButtonColorScheme(
-      background: Colors.white,
-      text: Colors.black,
-    ),
-    ButtonStatus.warning: ButtonColorScheme(
-      background: Colors.purple,
-      text: Colors.white,
-    ),
-    ButtonStatus.success: ButtonColorScheme(
-      background: Colors.green,
-      text: Colors.white,
-    ),
-  };
-
-  // Color schemes for edge buttons (outer hexagon vertices)
-  static final Map<ButtonStatus, ButtonColorScheme> edgeColors = {
-    ButtonStatus.normal: ButtonColorScheme(
-      background: Colors.transparent,
-      text: Colors.black,
-      border: Colors.tealAccent[400],
-    ),
-    ButtonStatus.active: ButtonColorScheme(
-      background: Colors.tealAccent[400],
-      text: Colors.black,
-      border: Colors.tealAccent[400],
-    ),
-    ButtonStatus.warning: ButtonColorScheme(
-      background: Colors.yellow,
-      text: Colors.black,
-      border: Colors.yellow,
-    ),
-    ButtonStatus.success: ButtonColorScheme(
-      background: Colors.lime,
-      text: Colors.black,
-      border: Colors.lime,
-    ),
-  };
-}
 
 class ReefModel extends MultiTopicNTWidgetModel {
   @override
@@ -113,6 +31,7 @@ class ReefModel extends MultiTopicNTWidgetModel {
 
   // NetworkTables topic paths
   String get branchsTopicName => '/reef/branchs';
+  String topicName = '/reef/dashboardbranchs';
 
   // NT4 subscriptions
   late NT4Subscription branchesSub;
@@ -128,12 +47,12 @@ class ReefModel extends MultiTopicNTWidgetModel {
   // Get button status from NetworkTables data
   ButtonStatus getButtonStatus(int buttonIndex) {
     if (buttonIndex < 0 || buttonIndex >= ReefConstants.totalButtons) {
-      return ButtonStatus.normal;
+      return ButtonStatus.Empty;
     }
 
     final branchData = branchesSub.value;
     if (branchData is! List || buttonIndex >= branchData.length) {
-      return ButtonStatus.normal;
+      return ButtonStatus.Empty;
     }
 
     final value = branchData[buttonIndex];
@@ -184,8 +103,6 @@ class ReefModel extends MultiTopicNTWidgetModel {
       return;
     }
 
-    const topicName = '/reef/dashboardbranchs';
-
     try {
       final List<int> buttonModes = List<int>.generate(
         ReefConstants.totalButtons,
@@ -234,13 +151,6 @@ class ReefModel extends MultiTopicNTWidgetModel {
     chooserStateListenable = Listenable.merge(subscriptions);
     chooserStateListenable.addListener(_onStateUpdate);
     _onStateUpdate();
-  }
-
-  @override
-  void resetSubscription() {
-    _publishedTopics.clear();
-    chooserStateListenable.removeListener(_onStateUpdate);
-    super.resetSubscription();
   }
 
   @override
@@ -319,7 +229,7 @@ class Reef extends NTWidget {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                const _HexagonWidget(),
+                _HexagonWidget(),
                 _ButtonGridWidget(
                   model: model,
                   onOptionSelected: model.selectOptionByIndex,
@@ -470,7 +380,7 @@ class _ButtonLayout extends StatelessWidget {
         offset: position,
         child: Transform.rotate(
           angle: angle,
-          child: _FaceButtonGrid(
+          child: _CoralButtonGrid(
             faceIndex: face,
             config: config,
             model: model,
@@ -494,7 +404,7 @@ class _ButtonLayout extends StatelessWidget {
 
       return Transform.translate(
         offset: position,
-        child: _EdgeButton(
+        child: _AlgaeButton(
           buttonIndex: buttonIndex,
           config: config,
           model: model,
@@ -523,14 +433,14 @@ class _LayoutConfig {
 }
 
 // 2x3 grid of buttons for each hexagon face
-class _FaceButtonGrid extends StatelessWidget {
+class _CoralButtonGrid extends StatelessWidget {
   final int faceIndex;
   final _LayoutConfig config;
   final ReefModel model;
   final double rotationAngle;
   final Function(int) onPressed;
 
-  const _FaceButtonGrid({
+  const _CoralButtonGrid({
     required this.faceIndex,
     required this.config,
     required this.model,
@@ -549,7 +459,7 @@ class _FaceButtonGrid extends StatelessWidget {
           children: List.generate(3, (col) {
             final buttonIndex =
                 faceIndex * ReefConstants.buttonsPerFace + row * 3 + col;
-            return _FaceButton(
+            return _CoralButton(
               buttonIndex: buttonIndex,
               config: config,
               model: model,
@@ -564,14 +474,14 @@ class _FaceButtonGrid extends StatelessWidget {
 }
 
 // Individual button on a hexagon face
-class _FaceButton extends StatelessWidget {
+class _CoralButton extends StatelessWidget {
   final int buttonIndex;
   final _LayoutConfig config;
   final ReefModel model;
   final double rotationAngle;
   final Function(int) onPressed;
 
-  const _FaceButton({
+  const _CoralButton({
     required this.buttonIndex,
     required this.config,
     required this.model,
@@ -605,13 +515,13 @@ class _FaceButton extends StatelessWidget {
 }
 
 // Button positioned at hexagon vertex
-class _EdgeButton extends StatelessWidget {
+class _AlgaeButton extends StatelessWidget {
   final int buttonIndex;
   final _LayoutConfig config;
   final ReefModel model;
   final Function(int) onPressed;
 
-  const _EdgeButton({
+  const _AlgaeButton({
     required this.buttonIndex,
     required this.config,
     required this.model,
