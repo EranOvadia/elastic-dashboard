@@ -39,8 +39,6 @@ class ReefModel extends MultiTopicNTWidgetModel {
   @override
   List<NT4Subscription> get subscriptions => [branchesSub];
 
-  late Listenable chooserStateListenable;
-
   // State management
   final Map<String, NT4Topic> _publishedTopics = {};
 
@@ -148,9 +146,13 @@ class ReefModel extends MultiTopicNTWidgetModel {
   @override
   void initializeSubscriptions() {
     branchesSub = ntConnection.subscribe(branchsTopicName, super.period);
-    chooserStateListenable = Listenable.merge(subscriptions);
-    chooserStateListenable.addListener(_onStateUpdate);
     _onStateUpdate();
+  }
+
+  @override
+  void resetSubscription() {
+    _publishedTopics.clear(); // Clear the topic cache
+    super.resetSubscription();
   }
 
   @override
