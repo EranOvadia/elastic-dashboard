@@ -5,11 +5,12 @@ on robotPeriodic:
 
 
 make a new class:
-
 package frc.robot;
 
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.DoubleArraySubscriber;
+import edu.wpi.first.networktables.IntegerArrayPublisher;
+import edu.wpi.first.networktables.IntegerArraySubscriber;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StringPublisher;
@@ -29,20 +30,20 @@ public class Reef {
     private final NetworkTable table = inst.getTable("reef");
 
     // Publisher: sends "branchs" array
-    private final DoubleArrayPublisher branchsPub;
+    private final IntegerArrayPublisher branchsPub;
 
     // Subscriber: listens for "dashboardbranchs" array
-    private final DoubleArraySubscriber branchsSub;
+    private final IntegerArraySubscriber branchsSub;
 
     // Publisher for type info
     private final StringPublisher typePub;
 
-    private final double[] branchs = new double[42];
+    private final long[] branchs = new long[42];
 
     private Reef() {
         // Create publisher and subscriber
-        branchsPub = table.getDoubleArrayTopic("branchs").publish();
-        branchsSub = table.getDoubleArrayTopic("dashboardbranchs").subscribe(new double[42]);
+        branchsPub = table.getIntegerArrayTopic("branchs").publish();
+        branchsSub = table.getIntegerArrayTopic("dashboardbranchs").subscribe(branchs);
 
         // Publish type info%
         typePub = table.getStringTopic(".type").publish();
@@ -65,7 +66,7 @@ public class Reef {
     }
 
     public void getBranchsFromDashboard() {
-        double[] branchsFromDas = branchsSub.get();
+        long[] branchsFromDas = branchsSub.get();
 
         // Debug print to confirm values
         Utils.print("Received length: " + branchsFromDas.length);
