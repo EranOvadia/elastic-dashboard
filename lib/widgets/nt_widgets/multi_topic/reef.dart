@@ -81,9 +81,7 @@ class ReefModel extends MultiTopicNTWidgetModel {
         existingTopic.properties.addAll(properties);
         ntConnection.publishTopic(existingTopic);
       }
-      //  else {
-      //   existingTopic.properties.addAll({'retained': true});
-      // }
+
       _publishedTopics[topicName] = existingTopic;
       return existingTopic;
     }
@@ -92,7 +90,8 @@ class ReefModel extends MultiTopicNTWidgetModel {
     final newTopic = ntConnection.publishNewTopic(
       topicName,
       dataType,
-      properties: properties ?? {'retained': false},
+      properties: properties ??
+          {'retained': false}, // NT client cann't create a retained topic
     );
 
     _publishedTopics[topicName] = newTopic;
@@ -180,7 +179,6 @@ class ReefModel extends MultiTopicNTWidgetModel {
     final newStatus = currentStatus.getNextStatus();
 
     _updateButtonStatus(index, newStatus.value);
-    // sendButtonsModesArray();
     notifyListeners();
   }
 
