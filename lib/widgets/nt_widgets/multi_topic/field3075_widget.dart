@@ -611,10 +611,7 @@ class Field3075Widget extends NTWidget {
         minWidth: 4.0,
         minHeight: 4.0,
       ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle
-      ),
+      decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle),
       width: length,
       height: width,
     );
@@ -668,10 +665,8 @@ class Field3075Widget extends NTWidget {
         minWidth: 4.0,
         minHeight: 4.0,
       ),
-      decoration: BoxDecoration(
-        color: Colors.tealAccent,
-        shape: BoxShape.circle
-      ),
+      decoration:
+          BoxDecoration(color: Colors.tealAccent, shape: BoxShape.circle),
       width: length,
       height: width,
     );
@@ -682,8 +677,6 @@ class Field3075Widget extends NTWidget {
       child: algea,
     );
   }
-
-  
 
   Offset _getTrajectoryPointOffset(
     Field3075WidgetModel model, {
@@ -715,127 +708,129 @@ class Field3075Widget extends NTWidget {
 
     List<NT4Subscription> listeners = [];
     listeners.add(model.robotSubscription);
-    listeners.add(model.coralsSubscription);
-    listeners.add(model.ballsSubscription);
     if (model._showOtherObjects || model._showTrajectories) {
       listeners.addAll(model._otherObjectSubscriptions);
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        List<Object?> robotPositionRaw =
-                model.robotSubscription.value?.tryCast<List<Object?>>() ?? [];
+    return LayoutBuilder(builder: (context, constraints) {
+      return ListenableBuilder(
+        listenable: Listenable.merge(listeners),
+        child: model.field.fieldImage,
+        builder: (context, child) {
+          List<Object?> robotPositionRaw =
+              model.robotSubscription.value?.tryCast<List<Object?>>() ?? [];
 
-            double robotX = 0;
-            double robotY = 0;
-            double robotTheta = 0;
+          double robotX = 0;
+          double robotY = 0;
+          double robotTheta = 0;
 
-            if (model.isPoseStruct(model.robotTopicName)) {
-              List<int> poseBytes = robotPositionRaw.whereType<int>().toList();
-              Pose2dStruct poseStruct =
-                  Pose2dStruct.valueFromBytes(Uint8List.fromList(poseBytes));
+          if (model.isPoseStruct(model.robotTopicName)) {
+            List<int> poseBytes = robotPositionRaw.whereType<int>().toList();
+            Pose2dStruct poseStruct =
+                Pose2dStruct.valueFromBytes(Uint8List.fromList(poseBytes));
 
-              robotX = poseStruct.x;
-              robotY = poseStruct.y;
-              robotTheta = poseStruct.angle;
-            } else {
-              List<double> robotPosition =
-                  robotPositionRaw.whereType<double>().toList();
+            robotX = poseStruct.x;
+            robotY = poseStruct.y;
+            robotTheta = poseStruct.angle;
+          } else {
+            List<double> robotPosition =
+                robotPositionRaw.whereType<double>().toList();
 
-              if (robotPosition.length >= 3) {
-                robotX = robotPosition[0];
-                robotY = robotPosition[1];
-                robotTheta = radians(robotPosition[2]);
-              }
+            if (robotPosition.length >= 3) {
+              robotX = robotPosition[0];
+              robotY = robotPosition[1];
+              robotTheta = radians(robotPosition[2]);
             }
+          }
 
-        // #region Rotation fix size
-        Size size = Size(constraints.maxWidth, constraints.maxHeight);
-        model.widgetSize = size;
+          // #region Rotation fix size
+          Size size = Size(constraints.maxWidth, constraints.maxHeight);
+          model.widgetSize = size;
 
-        FittedSizes fittedSizes = applyBoxFit(
-          BoxFit.contain,
-          model.field.fieldImageSize ?? const Size(0, 0),
-          size,
-        );
+          FittedSizes fittedSizes = applyBoxFit(
+            BoxFit.contain,
+            model.field.fieldImageSize ?? const Size(0, 0),
+            size,
+          );
 
-        FittedSizes rotatedFittedSizes = applyBoxFit(
-          BoxFit.contain,
-          model.field.fieldImageSize?.rotateBy(-radians(model.fieldRotation)) ??
-              const Size(0, 0),
-          size,
-        );
+          FittedSizes rotatedFittedSizes = applyBoxFit(
+            BoxFit.contain,
+            model.field.fieldImageSize
+                    ?.rotateBy(-radians(model.fieldRotation)) ??
+                const Size(0, 0),
+            size,
+          );
 
-        Offset fittedCenter = fittedSizes.destination.toOffset / 2;
-        Offset fieldCenter = model.field.center;
+          Offset fittedCenter = fittedSizes.destination.toOffset / 2;
+          Offset fieldCenter = model.field.center;
 
-        double scaleReduction =
-            (fittedSizes.destination.width / fittedSizes.source.width);
-        double rotatedScaleReduction = (rotatedFittedSizes.destination.width /
-            rotatedFittedSizes.source.width);
+          double scaleReduction =
+              (fittedSizes.destination.width / fittedSizes.source.width);
+          double rotatedScaleReduction = (rotatedFittedSizes.destination.width /
+              rotatedFittedSizes.source.width);
 
-        if (scaleReduction.isNaN) {
-          scaleReduction = 0;
-        }
-        if (rotatedScaleReduction.isNaN) {
-          rotatedScaleReduction = 0;
-        }
-        // #endregion
+          if (scaleReduction.isNaN) {
+            scaleReduction = 0;
+          }
+          if (rotatedScaleReduction.isNaN) {
+            rotatedScaleReduction = 0;
+          }
+          // #endregion
 
-        Widget robot = _getTransformedFieldObject(
-          model,
-          x: 1,
-          y: 1,
-          angleRadians: 90,
-          fieldCenter: fieldCenter,
-          scaleReduction: scaleReduction,
-          objectSize: Size(model.robotWidthMeters, model.robotLengthMeters),
-        );
+          Widget robot = _getTransformedFieldObject(
+            model,
+            x: robotX,
+            y: robotY,
+            angleRadians: robotTheta,
+            fieldCenter: fieldCenter,
+            scaleReduction: scaleReduction,
+            objectSize: Size(model.robotWidthMeters, model.robotLengthMeters),
+          );
 
-        // List<Widget> corals = [];
-        // corals.add(_getTransformedFieldCoral(model,
-        //     x: 2,
-        //     y: 2,
-        //     angleRadians: 0,
-        //     fieldCenter: fieldCenter,
-        //     scaleReduction: scaleReduction));
+          // List<Widget> corals = [];
+          // corals.add(_getTransformedFieldCoral(model,
+          //     x: 2,
+          //     y: 2,
+          //     angleRadians: 0,
+          //     fieldCenter: fieldCenter,
+          //     scaleReduction: scaleReduction));
 
-        // List<Widget> algeas = [];
-        // algeas.add(_getTransformedFieldAlgea(model,
-        //     x: 2,
-        //     y: 4,
-        //     angleRadians: 0,
-        //     fieldCenter: fieldCenter,
-        //     scaleReduction: scaleReduction));
+          // List<Widget> algeas = [];
+          // algeas.add(_getTransformedFieldAlgea(model,
+          //     x: 2,
+          //     y: 4,
+          //     angleRadians: 0,
+          //     fieldCenter: fieldCenter,
+          //     scaleReduction: scaleReduction));
 
-
-        return ListenableBuilder(
-          listenable: Listenable.merge(listeners),
-          child: model.field.fieldImage,
-          builder: (context, child) {
-            return Transform.scale(
-              scale: rotatedScaleReduction / scaleReduction,
-              child: Transform.rotate(
-                angle: radians(model.fieldRotation),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    SizedBox(
-                      width: fittedSizes.destination.width,
-                      height: fittedSizes.destination.height,
-                      child: child!,
-                    ),
-                    robot,
-                    // ...corals,
-                    // ...algeas
-                  ],
+          return ListenableBuilder(
+            listenable: Listenable.merge(listeners),
+            child: model.field.fieldImage,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: rotatedScaleReduction / scaleReduction,
+                child: Transform.rotate(
+                  angle: radians(model.fieldRotation),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      SizedBox(
+                        width: fittedSizes.destination.width,
+                        height: fittedSizes.destination.height,
+                        child: child!,
+                      ),
+                      robot,
+                      // ...corals,
+                      // ...algeas
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
-        );
-      },
-    );
+              );
+            },
+          );
+        },
+      );
+    });
   }
 }
 
@@ -916,5 +911,4 @@ class TrajectoryPainter extends CustomPainter {
         oldDelegate.strokeWidth != strokeWidth ||
         oldDelegate.color != color;
   }
-  
 }
