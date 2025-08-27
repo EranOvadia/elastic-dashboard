@@ -1,4 +1,5 @@
 import 'package:elastic_dashboard/widgets/nt_widgets/multi_topic/field3075_widget.dart';
+import 'package:elastic_dashboard/widgets/nt_widgets/multi_topic/coral_level_chooser.dart';
 import 'package:flutter/material.dart';
 
 import 'package:dot_cast/dot_cast.dart';
@@ -45,6 +46,8 @@ import 'package:elastic_dashboard/widgets/nt_widgets/single_topic/text_display.d
 import 'package:elastic_dashboard/widgets/nt_widgets/single_topic/toggle_button.dart';
 import 'package:elastic_dashboard/widgets/nt_widgets/single_topic/toggle_switch.dart';
 import 'package:elastic_dashboard/widgets/nt_widgets/single_topic/voltage_view.dart';
+
+import '../widgets/nt_widgets/multi_topic/reef.dart';
 
 typedef NTModelJsonProvider = NTWidgetModel Function({
   required Map<String, dynamic> jsonData,
@@ -130,6 +133,12 @@ class NTWidgetBuilder {
         minHeight: _normalSize * 1.6);
 
     registerWithAlias(
+        names: {Reef.widgetType, 'Reef2d'},
+        model: ReefModel.new,
+        widget: Reef.new,
+        fromJson: ReefModel.fromJson);
+
+    registerWithAlias(
         names: {TextDisplay.widgetType, 'Text View'},
         model: TextDisplayModel.new,
         widget: TextDisplay.new,
@@ -174,6 +183,12 @@ class NTWidgetBuilder {
         widget: ComboBoxChooser.new,
         fromJson: ComboBoxChooserModel.fromJson,
         minHeight: _normalSize * 0.85);
+    
+    registerWithAlias(
+      names: {CoralLevelChooser.widgetType, 'Coral Chooser'},
+      model: CoralLevelChooserModel.new,
+      widget: CoralLevelChooser.new,
+      fromJson: CoralLevelChooserModel.fromJson);
 
     register(
         name: CommandSchedulerWidget.widgetType,
