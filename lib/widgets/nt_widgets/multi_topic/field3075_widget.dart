@@ -35,10 +35,12 @@ class Field3075WidgetModel extends MultiTopicNTWidgetModel {
   String get robotTopicName => '$topic/Robot';
   String get coralsTopicName => '$topic/Corals';
   String get ballsTopicName => '$topic/Balls';
+  String get coralDrive2TopicName => '$topic/coralDrive2';
 
   late NT4Subscription robotSubscription;
   late NT4Subscription coralsSubscription;
   late NT4Subscription ballsSubscription;
+  late NT4Subscription coralDrive2Subscription;
 
   final List<String> _otherObjectTopics = [];
   final List<NT4Subscription> _otherObjectSubscriptions = [];
@@ -48,6 +50,7 @@ class Field3075WidgetModel extends MultiTopicNTWidgetModel {
         robotSubscription,
         coralsSubscription,
         ballsSubscription,
+        coralDrive2Subscription,
         ..._otherObjectSubscriptions,
       ];
 
@@ -232,6 +235,8 @@ class Field3075WidgetModel extends MultiTopicNTWidgetModel {
     robotSubscription = ntConnection.subscribe(robotTopicName, super.period);
     coralsSubscription = ntConnection.subscribe(coralsTopicName, super.period);
     ballsSubscription = ntConnection.subscribe(ballsTopicName, super.period);
+    coralDrive2Subscription =
+        ntConnection.subscribe(coralDrive2TopicName, super.period);
   }
 
   @override
@@ -621,7 +626,63 @@ class Field3075Widget extends NTWidget {
     );
   }
 
-  Widget _getTransformedFieldAlgea(
+  Widget _getTransformedFieldCoralDrive2(
+    Field3075WidgetModel model, {
+    required double x,
+    required double y,
+    required double angleRadians,
+    required Offset fieldCenter,
+    required double scaleReduction,
+  }) {
+    double objectWidth = 0.3;
+    double objectHeight = 0.3;
+    if (!x.isFinite || x.isNaN) {
+      x = 0;
+    }
+    if (!y.isFinite || y.isNaN) {
+      y = 0;
+    }
+    if (!angleRadians.isFinite || angleRadians.isNaN) {
+      angleRadians = 0;
+    }
+
+    double xFromCenter =
+        (x * model.field.pixelsPerMeterHorizontal - fieldCenter.dx) *
+            scaleReduction;
+
+    double yFromCenter =
+        (fieldCenter.dy - (y * model.field.pixelsPerMeterVertical)) *
+            scaleReduction;
+
+    double width =
+        objectWidth * model.field.pixelsPerMeterHorizontal * scaleReduction;
+
+    double length =
+        objectHeight * model.field.pixelsPerMeterVertical * scaleReduction;
+    Matrix4 transform = Matrix4.translationValues(xFromCenter, yFromCenter, 0.0)
+      ..rotateZ(-angleRadians);
+
+    Widget coralDrive2 = Container(
+      alignment: Alignment.center,
+      constraints: const BoxConstraints(
+        minWidth: 4.0,
+        minHeight: 4.0,
+      ),
+      decoration: BoxDecoration(
+          color: const Color.fromARGB(255, 228, 115, 35),
+          shape: BoxShape.circle),
+      width: length,
+      height: width,
+    );
+
+    return Transform(
+      origin: Offset(length, width) / 2,
+      transform: transform,
+      child: coralDrive2,
+    );
+  }
+
+  Widget _getTransformedFieldBalls(
     Field3075WidgetModel model, {
     required double x,
     required double y,
@@ -657,7 +718,7 @@ class Field3075Widget extends NTWidget {
     Matrix4 transform = Matrix4.translationValues(xFromCenter, yFromCenter, 0.0)
       ..rotateZ(-angleRadians);
 
-    Widget algea = Container(
+    Widget balls = Container(
       alignment: Alignment.center,
       constraints: const BoxConstraints(
         minWidth: 4.0,
@@ -672,7 +733,7 @@ class Field3075Widget extends NTWidget {
     return Transform(
       origin: Offset(length, width) / 2,
       transform: transform,
-      child: algea,
+      child: balls,
     );
   }
 
@@ -700,23 +761,24 @@ class Field3075Widget extends NTWidget {
     return Offset(xFromCenter, yFromCenter);
   }
 
-  List<Pose> getPosesFromSub(Field3075WidgetModel model,NT4Subscription sub, String topic) {
+  List<Pose> getPosesFromSub(
+      Field3075WidgetModel model, NT4Subscription sub, String topic) {
     List<Pose> result = [];
     List<Object?> objectPositionsRaw =
-              sub.value?.tryCast<List<Object?>>() ?? [];
-    
-            List<double> objectPositions =
-                objectPositionsRaw.whereType<double>().toList();
+        sub.value?.tryCast<List<Object?>>() ?? [];
 
-    for (int i = 0; i < objectPositions.length; i+=3) {
-        double objectX = objectPositions[i];
-        double objectY = objectPositions[i + 1];
-        double objectTheta = radians(objectPositions[i + 2]);
+    List<double> objectPositions =
+        objectPositionsRaw.whereType<double>().toList();
 
-        result.add(Pose(X: objectX, Y: objectY, THETA: objectTheta));
+    for (int i = 0; i < objectPositions.length; i += 3) {
+      double objectX = objectPositions[i];
+      double objectY = objectPositions[i + 1];
+      double objectTheta = radians(objectPositions[i + 2]);
+
+      result.add(Pose(X: objectX, Y: objectY, THETA: objectTheta));
     }
 
-      return result;
+    return result;
   }
 
   @override
@@ -760,8 +822,12 @@ class Field3075Widget extends NTWidget {
             }
           }
 
-          List<Pose> coralsPose = getPosesFromSub(model, model.coralsSubscription, model.coralsTopicName);
-          List<Pose> aligsPose = getPosesFromSub(model, model.ballsSubscription, model.ballsTopicName);
+          List<Pose> coralsPose = getPosesFromSub(
+              model, model.coralsSubscription, model.coralsTopicName);
+          List<Pose> ballsPose = getPosesFromSub(
+              model, model.ballsSubscription, model.ballsTopicName);
+          List<Pose> coralDrive2Pose = getPosesFromSub(
+              model, model.coralDrive2Subscription, model.coralDrive2TopicName);
 
           // #region Rotation fix size
           Size size = Size(constraints.maxWidth, constraints.maxHeight);
@@ -817,12 +883,21 @@ class Field3075Widget extends NTWidget {
                 scaleReduction: scaleReduction));
           }
 
-          List<Widget> algeas = [];
-          for (int i = 0; i < aligsPose.length; i++) {
-            algeas.add(_getTransformedFieldAlgea(model,
-                x: aligsPose.elementAt(i).x,
-                y: aligsPose.elementAt(i).y,
-                angleRadians: aligsPose.elementAt(i).theta,
+          List<Widget> balls = [];
+          for (int i = 0; i < ballsPose.length; i++) {
+            balls.add(_getTransformedFieldBalls(model,
+                x: ballsPose.elementAt(i).x,
+                y: ballsPose.elementAt(i).y,
+                angleRadians: ballsPose.elementAt(i).theta,
+                fieldCenter: fieldCenter,
+                scaleReduction: scaleReduction));
+          }
+          List<Widget> coralDrive2 = [];
+          for (int i = 0; i < coralDrive2Pose.length; i++) {
+            coralDrive2.add(_getTransformedFieldCoralDrive2(model,
+                x: coralDrive2Pose.elementAt(i).x,
+                y: coralDrive2Pose.elementAt(i).y,
+                angleRadians: coralDrive2Pose.elementAt(i).theta,
                 fieldCenter: fieldCenter,
                 scaleReduction: scaleReduction));
           }
@@ -844,8 +919,9 @@ class Field3075Widget extends NTWidget {
                         child: child!,
                       ),
                       robot,
+                      ...coralDrive2,
                       ...corals,
-                      ...algeas
+                      ...balls,
                     ],
                   ),
                 ),
@@ -942,11 +1018,7 @@ class Pose {
   late double y;
   late double theta;
 
-  Pose({
-    required double X,
-    required double Y,
-    required double THETA
-  }) {
+  Pose({required double X, required double Y, required double THETA}) {
     x = X;
     y = Y;
     theta = THETA;
