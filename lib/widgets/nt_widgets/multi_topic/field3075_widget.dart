@@ -537,8 +537,6 @@ class Field3075Widget extends NTWidget {
     Matrix4 transform = Matrix4.translationValues(xFromCenter, yFromCenter, 0.0)
       ..rotateZ(-angleRadians);
 
-    print('robot width ${0.125 * min(width, length)}');
-
     Widget otherObject = Container(
       alignment: Alignment.center,
       constraints: const BoxConstraints(
@@ -702,6 +700,25 @@ class Field3075Widget extends NTWidget {
     return Offset(xFromCenter, yFromCenter);
   }
 
+  List<Pose> getPosesFromSub(Field3075WidgetModel model,NT4Subscription sub, String topic) {
+    List<Pose> result = [];
+    List<Object?> objectPositionsRaw =
+              sub.value?.tryCast<List<Object?>>() ?? [];
+    
+            List<double> objectPositions =
+                objectPositionsRaw.whereType<double>().toList();
+
+    for (int i = 0; i < objectPositions.length; i+=3) {
+        double objectX = objectPositions[i];
+        double objectY = objectPositions[i + 1];
+        double objectTheta = radians(objectPositions[i + 2]);
+
+        result.add(Pose(X: objectX, Y: objectY, THETA: objectTheta));
+    }
+
+      return result;
+  }
+
   @override
   Widget build(BuildContext context) {
     Field3075WidgetModel model = cast(context.watch<NTWidgetModel>());
@@ -742,6 +759,9 @@ class Field3075Widget extends NTWidget {
               robotTheta = radians(robotPosition[2]);
             }
           }
+
+          List<Pose> coralsPose = getPosesFromSub(model, model.coralsSubscription, model.coralsTopicName);
+          List<Pose> aligsPose = getPosesFromSub(model, model.ballsSubscription, model.ballsTopicName);
 
           // #region Rotation fix size
           Size size = Size(constraints.maxWidth, constraints.maxHeight);
@@ -787,21 +807,25 @@ class Field3075Widget extends NTWidget {
             objectSize: Size(model.robotWidthMeters, model.robotLengthMeters),
           );
 
-          // List<Widget> corals = [];
-          // corals.add(_getTransformedFieldCoral(model,
-          //     x: 2,
-          //     y: 2,
-          //     angleRadians: 0,
-          //     fieldCenter: fieldCenter,
-          //     scaleReduction: scaleReduction));
+          List<Widget> corals = [];
+          for (int i = 0; i < coralsPose.length; i++) {
+            corals.add(_getTransformedFieldCoral(model,
+                x: coralsPose.elementAt(i).x,
+                y: coralsPose.elementAt(i).y,
+                angleRadians: coralsPose.elementAt(i).theta,
+                fieldCenter: fieldCenter,
+                scaleReduction: scaleReduction));
+          }
 
-          // List<Widget> algeas = [];
-          // algeas.add(_getTransformedFieldAlgea(model,
-          //     x: 2,
-          //     y: 4,
-          //     angleRadians: 0,
-          //     fieldCenter: fieldCenter,
-          //     scaleReduction: scaleReduction));
+          List<Widget> algeas = [];
+          for (int i = 0; i < aligsPose.length; i++) {
+            algeas.add(_getTransformedFieldAlgea(model,
+                x: aligsPose.elementAt(i).x,
+                y: aligsPose.elementAt(i).y,
+                angleRadians: aligsPose.elementAt(i).theta,
+                fieldCenter: fieldCenter,
+                scaleReduction: scaleReduction));
+          }
 
           return ListenableBuilder(
             listenable: Listenable.merge(listeners),
@@ -820,8 +844,8 @@ class Field3075Widget extends NTWidget {
                         child: child!,
                       ),
                       robot,
-                      // ...corals,
-                      // ...algeas
+                      ...corals,
+                      ...algeas
                     ],
                   ),
                 ),
@@ -910,5 +934,21 @@ class TrajectoryPainter extends CustomPainter {
     return oldDelegate.points != points ||
         oldDelegate.strokeWidth != strokeWidth ||
         oldDelegate.color != color;
+  }
+}
+
+class Pose {
+  late double x;
+  late double y;
+  late double theta;
+
+  Pose({
+    required double X,
+    required double Y,
+    required double THETA
+  }) {
+    x = X;
+    y = Y;
+    theta = THETA;
   }
 }
