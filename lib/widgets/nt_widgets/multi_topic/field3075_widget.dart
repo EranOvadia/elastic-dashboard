@@ -34,12 +34,10 @@ class Field3075WidgetModel extends MultiTopicNTWidgetModel {
 
   String get robotTopicName => '$topic/Robot';
   String get coralsTopicName => '$topic/Corals';
-  String get ballsTopicName => '$topic/Balls';
   String get coralDrive2TopicName => '$topic/coralDrive2';
 
   late NT4Subscription robotSubscription;
   late NT4Subscription coralsSubscription;
-  late NT4Subscription ballsSubscription;
   late NT4Subscription coralDrive2Subscription;
 
   final List<String> _otherObjectTopics = [];
@@ -49,7 +47,6 @@ class Field3075WidgetModel extends MultiTopicNTWidgetModel {
   List<NT4Subscription> get subscriptions => [
         robotSubscription,
         coralsSubscription,
-        ballsSubscription,
         coralDrive2Subscription,
         ..._otherObjectSubscriptions,
       ];
@@ -234,7 +231,6 @@ class Field3075WidgetModel extends MultiTopicNTWidgetModel {
 
     robotSubscription = ntConnection.subscribe(robotTopicName, super.period);
     coralsSubscription = ntConnection.subscribe(coralsTopicName, super.period);
-    ballsSubscription = ntConnection.subscribe(ballsTopicName, super.period);
     coralDrive2Subscription =
         ntConnection.subscribe(coralDrive2TopicName, super.period);
   }
@@ -682,60 +678,9 @@ class Field3075Widget extends NTWidget {
     );
   }
 
-  Widget _getTransformedFieldBalls(
-    Field3075WidgetModel model, {
-    required double x,
-    required double y,
-    required double angleRadians,
-    required Offset fieldCenter,
-    required double scaleReduction,
-  }) {
-    double objectWidth = 0.6;
-    double objectHeight = 0.6;
-    if (!x.isFinite || x.isNaN) {
-      x = 0;
-    }
-    if (!y.isFinite || y.isNaN) {
-      y = 0;
-    }
-    if (!angleRadians.isFinite || angleRadians.isNaN) {
-      angleRadians = 0;
-    }
 
-    double xFromCenter =
-        (x * model.field.pixelsPerMeterHorizontal - fieldCenter.dx) *
-            scaleReduction;
 
-    double yFromCenter =
-        (fieldCenter.dy - (y * model.field.pixelsPerMeterVertical)) *
-            scaleReduction;
-
-    double width =
-        objectWidth * model.field.pixelsPerMeterHorizontal * scaleReduction;
-
-    double length =
-        objectHeight * model.field.pixelsPerMeterVertical * scaleReduction;
-    Matrix4 transform = Matrix4.translationValues(xFromCenter, yFromCenter, 0.0)
-      ..rotateZ(-angleRadians);
-
-    Widget balls = Container(
-      alignment: Alignment.center,
-      constraints: const BoxConstraints(
-        minWidth: 4.0,
-        minHeight: 4.0,
-      ),
-      decoration:
-          BoxDecoration(color: Colors.tealAccent, shape: BoxShape.circle),
-      width: length,
-      height: width,
-    );
-
-    return Transform(
-      origin: Offset(length, width) / 2,
-      transform: transform,
-      child: balls,
-    );
-  }
+  
 
   Offset _getTrajectoryPointOffset(
     Field3075WidgetModel model, {
@@ -821,11 +766,11 @@ class Field3075Widget extends NTWidget {
               robotTheta = radians(robotPosition[2]);
             }
           }
+        
 
           List<Pose> coralsPose = getPosesFromSub(
               model, model.coralsSubscription, model.coralsTopicName);
-          List<Pose> ballsPose = getPosesFromSub(
-              model, model.ballsSubscription, model.ballsTopicName);
+         
           List<Pose> coralDrive2Pose = getPosesFromSub(
               model, model.coralDrive2Subscription, model.coralDrive2TopicName);
 
@@ -898,17 +843,7 @@ class Field3075Widget extends NTWidget {
                   scaleReduction: scaleReduction));
             }
           }
-
-          List<Widget> balls = [];
-          for (int i = 0; i < ballsPose.length; i++) {
-            balls.add(_getTransformedFieldBalls(model,
-                x: ballsPose.elementAt(i).x,
-                y: ballsPose.elementAt(i).y,
-                angleRadians: ballsPose.elementAt(i).theta,
-                fieldCenter: fieldCenter,
-                scaleReduction: scaleReduction));
-          }
-          
+    
 
           return ListenableBuilder(
             listenable: Listenable.merge(listeners),
@@ -929,7 +864,7 @@ class Field3075Widget extends NTWidget {
                       robot,
                       ...coralDrive2,
                       ...corals,
-                      ...balls,
+                      
                     ],
                   ),
                 ),
