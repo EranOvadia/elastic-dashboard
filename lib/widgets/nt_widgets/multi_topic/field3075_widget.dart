@@ -873,14 +873,30 @@ class Field3075Widget extends NTWidget {
             objectSize: Size(model.robotWidthMeters, model.robotLengthMeters),
           );
 
-          List<Widget> corals = [];
-          for (int i = 0; i < coralsPose.length; i++) {
-            corals.add(_getTransformedFieldCoral(model,
-                x: coralsPose.elementAt(i).x,
-                y: coralsPose.elementAt(i).y,
-                angleRadians: coralsPose.elementAt(i).theta,
+          List<Widget> coralDrive2 = [];
+          for (int i = 0; i < coralDrive2Pose.length; i++) {
+            coralDrive2.add(_getTransformedFieldCoralDrive2(model,
+                x: coralDrive2Pose.elementAt(i).x,
+                y: coralDrive2Pose.elementAt(i).y,
+                angleRadians: coralDrive2Pose.elementAt(i).theta,
                 fieldCenter: fieldCenter,
                 scaleReduction: scaleReduction));
+          }
+
+          List<Widget> corals = [];
+          for (int i = 0; i < coralsPose.length; i++) {
+            if (!(coralDrive2Pose.length == 1 && (
+              coralDrive2Pose.elementAt(0).x != coralsPose.elementAt(i).x ||
+              coralDrive2Pose.elementAt(0).y != coralsPose.elementAt(i).y ||
+              coralDrive2Pose.elementAt(0).theta != coralsPose.elementAt(i).theta
+              ))) {
+              corals.add(_getTransformedFieldCoral(model,
+                  x: coralsPose.elementAt(i).x,
+                  y: coralsPose.elementAt(i).y,
+                  angleRadians: coralsPose.elementAt(i).theta,
+                  fieldCenter: fieldCenter,
+                  scaleReduction: scaleReduction));
+            }
           }
 
           List<Widget> balls = [];
@@ -892,15 +908,7 @@ class Field3075Widget extends NTWidget {
                 fieldCenter: fieldCenter,
                 scaleReduction: scaleReduction));
           }
-          List<Widget> coralDrive2 = [];
-          for (int i = 0; i < coralDrive2Pose.length; i++) {
-            coralDrive2.add(_getTransformedFieldCoralDrive2(model,
-                x: coralDrive2Pose.elementAt(i).x,
-                y: coralDrive2Pose.elementAt(i).y,
-                angleRadians: coralDrive2Pose.elementAt(i).theta,
-                fieldCenter: fieldCenter,
-                scaleReduction: scaleReduction));
-          }
+          
 
           return ListenableBuilder(
             listenable: Listenable.merge(listeners),
