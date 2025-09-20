@@ -1,0 +1,18 @@
+{
+  "game": "Reefscape-red",
+  "field-image": "assets/fields/2025-red.png",
+  "field-corners": {
+    "top-left": [
+      0,
+      91
+    ],
+    "bottom-right": [
+      1688,
+      1437
+    ]
+  },
+  "field-size": [
+    9.809,
+    8.052
+  ]
+}
