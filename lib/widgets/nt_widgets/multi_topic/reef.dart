@@ -67,9 +67,9 @@ class ReefModel extends MultiTopicNTWidgetModel {
     return ButtonStatus.fromInt(intValue);
   }
 
-  // New: Get hexagon side aiming status (0 = normal/purple, 1 = aiming/blue)
-  // Sequential mapping: side 0 -> index 42, side 1 -> index 43, side 2 -> index 44,
-  // side 3 -> index 45, side 4 -> index 46, side 5 -> index 47
+  // Get hexagon side aiming status with custom mapping
+  // Custom mapping: side 0 -> index 42, side 1 -> index 45, side 2 -> index 44,
+  // side 3 -> index 43, side 4 -> index 46, side 5 -> index 47
   bool getHexagonSideAiming(int sideIndex) {
     if (sideIndex < 0 || sideIndex >= ReefConstants.hexagonSides) {
       return false;
@@ -80,8 +80,8 @@ class ReefModel extends MultiTopicNTWidgetModel {
       return false;
     }
 
-    // Sequential mapping: side 0->42, side 1->43, side 2->44, side 3->45, side 4->46, side 5->47
-    final arrayIndex = 42 + sideIndex;
+    // Custom mapping: rearrange the array indices
+    final arrayIndex = _getArrayIndexForSide(sideIndex);
 
     if (arrayIndex >= branchData.length) {
       return false;
@@ -95,7 +95,20 @@ class ReefModel extends MultiTopicNTWidgetModel {
       _ => 0,
     };
 
-    return intValue == 1;
+    return intValue == 2;
+  }
+
+  // Helper method to map side index to array index
+  int _getArrayIndexForSide(int sideIndex) {
+    switch (sideIndex) {
+      case 4: return 42; // side 0 -> index 42
+      case 5: return 43; // side 1 -> index 45 (swapped)
+      case 0: return 44; // side 2 -> index 44
+      case 1: return 45; // side 3 -> index 43 (swapped)
+      case 2: return 46; // side 4 -> index 46
+      case 3: return 47; // side 5 -> index 47
+      default: return 42;
+    }
   }
 
   // Get or create NetworkTables topics with caching
@@ -145,15 +158,23 @@ class ReefModel extends MultiTopicNTWidgetModel {
           if (index < ReefConstants.totalButtons) {
             return getButtonStatus(index).value;
           } else {
-            // Hexagon side aiming states with sequential mapping
-            // Index 42->side 0, 43->side 1, 44->side 2, 45->side 3, 46->side 4, 47->side 5
-            final sideIndex = index - ReefConstants.totalButtons;
+            // For hexagon indices (42-47), we need to determine which side they represent
+            // and get the aiming status for that side
+            final sideIndex = switch (index) {
+              42 => 0, // index 42 -> side 0
+              43 => 3, // index 43 -> side 3 (swapped)
+              44 => 2, // index 44 -> side 2
+              45 => 1, // index 45 -> side 1 (swapped)
+              46 => 4, // index 46 -> side 4
+              47 => 5, // index 47 -> side 5
+              _ => 0,
+            };
             return getHexagonSideAiming(sideIndex) ? 1 : 0;
           }
         },
       );
 
-      final topic = _getOrCreateTopic(topicName, NT4TypeStr.kIntArr);
+      final topic = _getOrCreateTopic(topicName, 'int[]');
       ntConnection.updateDataFromTopic(topic, allModes);
     } catch (e) {
       debugPrint('Error sending button modes array: $e');
@@ -167,7 +188,7 @@ class ReefModel extends MultiTopicNTWidgetModel {
     }
 
     try {
-      final topic = _getOrCreateTopic(branchsTopicName, NT4TypeStr.kIntArr);
+      final topic = _getOrCreateTopic(branchsTopicName, 'int[]');
       ntConnection.updateDataFromTopic(topic, branchList);
     } catch (e) {
       debugPrint('Error publishing branch status: $e');
