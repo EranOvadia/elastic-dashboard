@@ -47,25 +47,32 @@ class ReefModel extends MultiTopicNTWidgetModel {
 
   // Get button status from NetworkTables data
   ButtonStatus getButtonStatus(int buttonIndex) {
-    if (buttonIndex < 0 || buttonIndex >= ReefConstants.totalButtons) {
-      return ButtonStatus.Empty;
-    }
-
-    final branchData = branchesSub.value;
-    if (branchData is! List || buttonIndex >= branchData.length) {
-      return ButtonStatus.Empty;
-    }
-
-    final value = branchData[buttonIndex];
-    final intValue = switch (value) {
-      int v => v,
-      String v => int.tryParse(v) ?? 0,
-      double v => v.toInt(),
-      _ => 0,
-    };
-
-    return ButtonStatus.fromInt(intValue);
+  if (buttonIndex < 0 || buttonIndex >= ReefConstants.totalButtons) {
+    return ButtonStatus.Empty;
   }
+
+  final branchData = branchesSub.value;
+  if (branchData is! List || buttonIndex >= branchData.length) {
+    return ButtonStatus.Empty;
+  }
+
+  // Only shift edge buttons (indexes 35-41)
+  int arrayIndex = buttonIndex;
+  if (buttonIndex >= 36 && buttonIndex <= 42) {
+    // Shift edge buttons: 35->36, 36->37, 37->38, 38->39, 39->40, 40->41, 41->35
+    arrayIndex = buttonIndex == 42 ? 36 : buttonIndex + 1;
+  }
+
+  final value = branchData[arrayIndex];
+  final intValue = switch (value) {
+    int v => v,
+    String v => int.tryParse(v) ?? 0,
+    double v => v.toInt(),
+    _ => 0,
+  };
+
+  return ButtonStatus.fromInt(intValue);
+}
 
   // Get hexagon side aiming status with custom mapping
   // Custom mapping: side 0 -> index 42, side 1 -> index 45, side 2 -> index 44,
@@ -146,40 +153,46 @@ class ReefModel extends MultiTopicNTWidgetModel {
 
   // Send current button states to dashboard topic
   void sendButtonsModesArray() {
-    if (!ntConnection.isNT4Connected) {
-      return;
-    }
-
-    try {
-      // Create array with button modes + hexagon side aiming states
-      final List<dynamic> allModes = List<int>.generate(
-        ReefConstants.totalArraySize,
-        (index) {
-          if (index < ReefConstants.totalButtons) {
-            return getButtonStatus(index).value;
-          } else {
-            // For hexagon indices (42-47), we need to determine which side they represent
-            // and get the aiming status for that side
-            final sideIndex = switch (index) {
-              42 => 0, // index 42 -> side 0
-              43 => 3, // index 43 -> side 3 (swapped)
-              44 => 2, // index 44 -> side 2
-              45 => 1, // index 45 -> side 1 (swapped)
-              46 => 4, // index 46 -> side 4
-              47 => 5, // index 47 -> side 5
-              _ => 0,
-            };
-            return getHexagonSideAiming(sideIndex) ? 1 : 0;
-          }
-        },
-      );
-
-      final topic = _getOrCreateTopic(topicName, 'int[]');
-      ntConnection.updateDataFromTopic(topic, allModes);
-    } catch (e) {
-      debugPrint('Error sending button modes array: $e');
-    }
+  if (!ntConnection.isNT4Connected) {
+    return;
   }
+
+  try {
+    // Create array with button modes + hexagon side aiming states
+    final List<dynamic> allModes = List<int>.generate(
+      ReefConstants.totalArraySize,
+      (index) {
+        if (index < ReefConstants.totalButtons) {
+          // For edge button array indexes (35-41), we need to reverse the shift
+          int uiButtonIndex = index;
+          if (index >= 36 && index <= 42) {
+            // Reverse shift: 35->41, 36->35, 37->36, 38->37, 39->38, 40->39, 41->40
+            uiButtonIndex = index == 36 ? 42 : index - 1;
+          }
+          return getButtonStatus(uiButtonIndex).value;
+        } else {
+          // For hexagon indices (42-47), we need to determine which side they represent
+          // and get the aiming status for that side
+          final sideIndex = switch (index) {
+            42 => 0, // index 42 -> side 0
+            43 => 3, // index 43 -> side 3 (swapped)
+            44 => 2, // index 44 -> side 2
+            45 => 1, // index 45 -> side 1 (swapped)
+            46 => 4, // index 46 -> side 4
+            47 => 5, // index 47 -> side 5
+            _ => 0,
+          };
+          return getHexagonSideAiming(sideIndex) ? 1 : 0;
+        }
+      },
+    );
+
+    final topic = _getOrCreateTopic(topicName, 'int[]');
+    ntConnection.updateDataFromTopic(topic, allModes);
+  } catch (e) {
+    debugPrint('Error sending button modes array: $e');
+  }
+}
 
   // Publish branch status array to NetworkTables
   void _publishBranchStatus(List<dynamic> branchList) {
@@ -252,31 +265,38 @@ class ReefModel extends MultiTopicNTWidgetModel {
 
   // Update individual button status
   void _updateButtonStatus(int buttonIndex, int newStatus) {
-    final currentBranchData = branchesSub.value;
-    List<dynamic> branchList;
+  final currentBranchData = branchesSub.value;
+  List<dynamic> branchList;
 
-    if (currentBranchData is List) {
-      branchList = List.from(currentBranchData);
-    } else {
-      branchList = List.filled(ReefConstants.totalArraySize, 0);
-    }
+  if (currentBranchData is List) {
+    branchList = List.from(currentBranchData);
+  } else {
+    branchList = List.filled(ReefConstants.totalArraySize, 0);
+  }
 
-    // Ensure array is large enough for all elements (buttons + hexagon sides)
-    while (branchList.length < ReefConstants.totalArraySize) {
-      branchList.add(0);
-    }
+  // Ensure array is large enough for all elements (buttons + hexagon sides)
+  while (branchList.length < ReefConstants.totalArraySize) {
+    branchList.add(0);
+  }
 
-    branchList[buttonIndex] = newStatus;
+  // Only shift edge buttons (indexes 35-41)
+  int arrayIndex = buttonIndex;
+  if (buttonIndex >= 36 && buttonIndex <= 42) {
+    // Shift edge buttons: 35->36, 36->37, 37->38, 38->39, 39->40, 40->41, 41->35
+    arrayIndex = buttonIndex == 42 ? 36 : buttonIndex + 1;
+  }
 
-    if (ntConnection.isNT4Connected) {
-      try {
-        _publishBranchStatus(branchList);
-        Future.microtask(() => sendButtonsModesArray());
-      } catch (e) {
-        debugPrint('Error updating button status: $e');
-      }
+  branchList[arrayIndex] = newStatus;
+
+  if (ntConnection.isNT4Connected) {
+    try {
+      _publishBranchStatus(branchList);
+      Future.microtask(() => sendButtonsModesArray());
+    } catch (e) {
+      debugPrint('Error updating button status: $e');
     }
   }
+}
 }
 
 class Reef extends NTWidget {
