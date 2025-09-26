@@ -58,9 +58,9 @@ class ReefModel extends MultiTopicNTWidgetModel {
 
   // Only shift edge buttons (indexes 35-41)
   int arrayIndex = buttonIndex;
-  if (buttonIndex >= 36 && buttonIndex <= 42) {
+  if (buttonIndex >= 36 && buttonIndex <= 41) {
     // Shift edge buttons: 35->36, 36->37, 37->38, 38->39, 39->40, 40->41, 41->35
-    arrayIndex = buttonIndex == 42 ? 36 : buttonIndex + 1;
+    arrayIndex = buttonIndex == 41 ? 36 : buttonIndex + 1;
   }
 
   final value = branchData[arrayIndex];
@@ -165,9 +165,9 @@ class ReefModel extends MultiTopicNTWidgetModel {
         if (index < ReefConstants.totalButtons) {
           // For edge button array indexes (35-41), we need to reverse the shift
           int uiButtonIndex = index;
-          if (index >= 36 && index <= 42) {
+          if (index >= 36 && index <= 41) {
             // Reverse shift: 35->41, 36->35, 37->36, 38->37, 39->38, 40->39, 41->40
-            uiButtonIndex = index == 36 ? 42 : index - 1;
+            uiButtonIndex = index == 36 ? 41 : index - 1;
           }
           return getButtonStatus(uiButtonIndex).value;
         } else {
@@ -281,9 +281,9 @@ class ReefModel extends MultiTopicNTWidgetModel {
 
   // Only shift edge buttons (indexes 35-41)
   int arrayIndex = buttonIndex;
-  if (buttonIndex >= 36 && buttonIndex <= 42) {
+  if (buttonIndex >= 36 && buttonIndex <= 41) {
     // Shift edge buttons: 35->36, 36->37, 37->38, 38->39, 39->40, 40->41, 41->35
-    arrayIndex = buttonIndex == 42 ? 36 : buttonIndex + 1;
+    arrayIndex = buttonIndex == 41 ? 36 : buttonIndex + 1;
   }
 
   branchList[arrayIndex] = newStatus;
