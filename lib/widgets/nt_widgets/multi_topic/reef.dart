@@ -8,22 +8,24 @@ import 'package:elastic_dashboard/widgets/dialog_widgets/dialog_toggle_switch.da
 import 'package:elastic_dashboard/widgets/nt_widgets/nt_widget.dart';
 import 'reef_buttons_states.dart';
 
-// Constants for the hexagonal button layout3
+// Constants for the hexagonal button layout
 class ReefConstants {
   static const String widgetType = 'Reef';
   static const int totalButtons = 42;
   static const int faceButtons = 36;
   static const int edgeButtons = 6;
+  static const int hexagonSides =
+      6; // New: sides of the hexagon for aiming modes
+  static const int totalArraySize = totalButtons + hexagonSides; // 48 total
   static const int buttonsPerFace = 6;
   static const int facesCount = 6;
   static const double globalRotation = math.pi / 6;
 
   // Visual styling
   static const Color hexagonColor = Color.fromARGB(255, 100, 2, 93);
+  static const Color hexagonAimingColor = Colors.blue; // New: blue for aiming
   static const double hexagonStrokeWidth = 5.0;
 }
-
-// Button states for the reef interface
 
 class ReefModel extends MultiTopicNTWidgetModel {
   @override
@@ -45,16 +47,54 @@ class ReefModel extends MultiTopicNTWidgetModel {
 
   // Get button status from NetworkTables data
   ButtonStatus getButtonStatus(int buttonIndex) {
-    if (buttonIndex < 0 || buttonIndex >= ReefConstants.totalButtons) {
-      return ButtonStatus.Empty;
+  if (buttonIndex < 0 || buttonIndex >= ReefConstants.totalButtons) {
+    return ButtonStatus.Empty;
+  }
+
+  final branchData = branchesSub.value;
+  if (branchData is! List || buttonIndex >= branchData.length) {
+    return ButtonStatus.Empty;
+  }
+
+  // Only shift edge buttons (indexes 35-41)
+  int arrayIndex = buttonIndex;
+  if (buttonIndex >= 36 && buttonIndex <= 41) {
+    // Shift edge buttons: 35->36, 36->37, 37->38, 38->39, 39->40, 40->41, 41->35
+    arrayIndex = buttonIndex == 41 ? 36 : buttonIndex + 1;
+  }
+
+  final value = branchData[arrayIndex];
+  final intValue = switch (value) {
+    int v => v,
+    String v => int.tryParse(v) ?? 0,
+    double v => v.toInt(),
+    _ => 0,
+  };
+
+  return ButtonStatus.fromInt(intValue);
+}
+
+  // Get hexagon side aiming status with custom mapping
+  // Custom mapping: side 0 -> index 42, side 1 -> index 45, side 2 -> index 44,
+  // side 3 -> index 43, side 4 -> index 46, side 5 -> index 47
+  bool getHexagonSideAiming(int sideIndex) {
+    if (sideIndex < 0 || sideIndex >= ReefConstants.hexagonSides) {
+      return false;
     }
 
     final branchData = branchesSub.value;
-    if (branchData is! List || buttonIndex >= branchData.length) {
-      return ButtonStatus.Empty;
+    if (branchData is! List) {
+      return false;
     }
 
-    final value = branchData[buttonIndex];
+    // Custom mapping: rearrange the array indices
+    final arrayIndex = _getArrayIndexForSide(sideIndex);
+
+    if (arrayIndex >= branchData.length) {
+      return false;
+    }
+
+    final value = branchData[arrayIndex];
     final intValue = switch (value) {
       int v => v,
       String v => int.tryParse(v) ?? 0,
@@ -62,7 +102,20 @@ class ReefModel extends MultiTopicNTWidgetModel {
       _ => 0,
     };
 
-    return ButtonStatus.fromInt(intValue);
+    return intValue == 2;
+  }
+
+  // Helper method to map side index to array index
+  int _getArrayIndexForSide(int sideIndex) {
+    switch (sideIndex) {
+      case 4: return 42; // side 0 -> index 42
+      case 5: return 43; // side 1 -> index 45 (swapped)
+      case 0: return 44; // side 2 -> index 44
+      case 1: return 45; // side 3 -> index 43 (swapped)
+      case 2: return 46; // side 4 -> index 46
+      case 3: return 47; // side 5 -> index 47
+      default: return 42;
+    }
   }
 
   // Get or create NetworkTables topics with caching
@@ -100,22 +153,46 @@ class ReefModel extends MultiTopicNTWidgetModel {
 
   // Send current button states to dashboard topic
   void sendButtonsModesArray() {
-    if (!ntConnection.isNT4Connected) {
-      return;
-    }
-
-    try {
-      final List<dynamic> buttonModes = List<int>.generate(
-        ReefConstants.totalButtons,
-        (index) => getButtonStatus(index).value,
-      );
-
-      final topic = _getOrCreateTopic(topicName, NT4TypeStr.kIntArr);
-      ntConnection.updateDataFromTopic(topic, buttonModes);
-    } catch (e) {
-      debugPrint('Error sending button modes array: $e');
-    }
+  if (!ntConnection.isNT4Connected) {
+    return;
   }
+
+  try {
+    // Create array with button modes + hexagon side aiming states
+    final List<dynamic> allModes = List<int>.generate(
+      ReefConstants.totalArraySize,
+      (index) {
+        if (index < ReefConstants.totalButtons) {
+          // For edge button array indexes (35-41), we need to reverse the shift
+          int uiButtonIndex = index;
+          if (index >= 36 && index <= 41) {
+            // Reverse shift: 35->41, 36->35, 37->36, 38->37, 39->38, 40->39, 41->40
+            uiButtonIndex = index == 36 ? 41 : index - 1;
+          }
+          return getButtonStatus(uiButtonIndex).value;
+        } else {
+          // For hexagon indices (42-47), we need to determine which side they represent
+          // and get the aiming status for that side
+          final sideIndex = switch (index) {
+            42 => 0, // index 42 -> side 0
+            43 => 3, // index 43 -> side 3 (swapped)
+            44 => 2, // index 44 -> side 2
+            45 => 1, // index 45 -> side 1 (swapped)
+            46 => 4, // index 46 -> side 4
+            47 => 5, // index 47 -> side 5
+            _ => 0,
+          };
+          return getHexagonSideAiming(sideIndex) ? 1 : 0;
+        }
+      },
+    );
+
+    final topic = _getOrCreateTopic(topicName, 'int[]');
+    ntConnection.updateDataFromTopic(topic, allModes);
+  } catch (e) {
+    debugPrint('Error sending button modes array: $e');
+  }
+}
 
   // Publish branch status array to NetworkTables
   void _publishBranchStatus(List<dynamic> branchList) {
@@ -124,7 +201,7 @@ class ReefModel extends MultiTopicNTWidgetModel {
     }
 
     try {
-      final topic = _getOrCreateTopic(branchsTopicName, NT4TypeStr.kIntArr);
+      final topic = _getOrCreateTopic(branchsTopicName, 'int[]');
       ntConnection.updateDataFromTopic(topic, branchList);
     } catch (e) {
       debugPrint('Error publishing branch status: $e');
@@ -188,31 +265,38 @@ class ReefModel extends MultiTopicNTWidgetModel {
 
   // Update individual button status
   void _updateButtonStatus(int buttonIndex, int newStatus) {
-    final currentBranchData = branchesSub.value;
-    List<dynamic> branchList;
+  final currentBranchData = branchesSub.value;
+  List<dynamic> branchList;
 
-    if (currentBranchData is List) {
-      branchList = List.from(currentBranchData);
-    } else {
-      branchList = List.filled(ReefConstants.totalButtons, 0);
-    }
+  if (currentBranchData is List) {
+    branchList = List.from(currentBranchData);
+  } else {
+    branchList = List.filled(ReefConstants.totalArraySize, 0);
+  }
 
-    // Ensure array is large enough
-    while (branchList.length <= buttonIndex) {
-      branchList.add(0);
-    }
+  // Ensure array is large enough for all elements (buttons + hexagon sides)
+  while (branchList.length < ReefConstants.totalArraySize) {
+    branchList.add(0);
+  }
 
-    branchList[buttonIndex] = newStatus;
+  // Only shift edge buttons (indexes 35-41)
+  int arrayIndex = buttonIndex;
+  if (buttonIndex >= 36 && buttonIndex <= 41) {
+    // Shift edge buttons: 35->36, 36->37, 37->38, 38->39, 39->40, 40->41, 41->35
+    arrayIndex = buttonIndex == 41 ? 36 : buttonIndex + 1;
+  }
 
-    if (ntConnection.isNT4Connected) {
-      try {
-        _publishBranchStatus(branchList);
-        Future.microtask(() => sendButtonsModesArray());
-      } catch (e) {
-        debugPrint('Error updating button status: $e');
-      }
+  branchList[arrayIndex] = newStatus;
+
+  if (ntConnection.isNT4Connected) {
+    try {
+      _publishBranchStatus(branchList);
+      Future.microtask(() => sendButtonsModesArray());
+    } catch (e) {
+      debugPrint('Error updating button status: $e');
     }
   }
+}
 }
 
 class Reef extends NTWidget {
@@ -236,7 +320,7 @@ class Reef extends NTWidget {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                _HexagonWidget(),
+                _HexagonWidget(model: model), // Pass model to hexagon
                 _ButtonGridWidget(
                   model: model,
                   onOptionSelected: model.selectOptionByIndex,
@@ -251,9 +335,11 @@ class Reef extends NTWidget {
   }
 }
 
-// Draws the central hexagon outline
+// Draws the central hexagon outline with dynamic side coloring
 class _HexagonWidget extends StatelessWidget {
-  const _HexagonWidget();
+  final ReefModel model;
+
+  const _HexagonWidget({required this.model});
 
   @override
   Widget build(BuildContext context) {
@@ -264,7 +350,7 @@ class _HexagonWidget extends StatelessWidget {
         return Center(
           child: CustomPaint(
             size: Size(size, size),
-            painter: _HexagonPainter(),
+            painter: _HexagonPainter(model: model),
           ),
         );
       },
@@ -272,40 +358,102 @@ class _HexagonWidget extends StatelessWidget {
   }
 }
 
-// Custom painter for hexagon with center dot
+// Custom painter for hexagon with center dot and dynamic side coloring
 class _HexagonPainter extends CustomPainter {
+  final ReefModel model;
+
+  _HexagonPainter({required this.model});
+
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = ReefConstants.hexagonColor
-      ..strokeWidth = ReefConstants.hexagonStrokeWidth
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
     final center = Offset(size.width / 2, size.height / 2);
     final radius = math.min(size.width, size.height) / 2;
 
-    _drawHexagon(canvas, paint, center, radius);
-    _drawCenterDot(canvas, center, size);
-  }
-
-  void _drawHexagon(Canvas canvas, Paint paint, Offset center, double radius) {
     canvas.save();
     canvas.translate(center.dx, center.dy);
     canvas.rotate(math.pi / 2);
 
-    final path = Path()
-      ..moveTo(
-          radius * math.cos(-math.pi / 6), radius * math.sin(-math.pi / 6));
+    _drawHexagonWithColoredSides(canvas, radius);
+    canvas.restore();
 
+    _drawCenterDot(canvas, center, size);
+  }
+
+  void _drawHexagonWithColoredSides(Canvas canvas, double radius) {
+    // First pass: Draw all non-glowing sides (purple)
     for (int i = 0; i < 6; i++) {
-      final angle = i * math.pi / 3 + -math.pi / 6;
-      path.lineTo(radius * math.cos(angle), radius * math.sin(angle));
+      final isAiming = model.getHexagonSideAiming(i);
+
+      if (!isAiming) {
+        final startAngle = i * math.pi / 3 + -math.pi / 6;
+        final endAngle = (i + 1) * math.pi / 3 + -math.pi / 6;
+
+        final startPoint = Offset(
+          radius * math.cos(startAngle),
+          radius * math.sin(startAngle),
+        );
+        final endPoint = Offset(
+          radius * math.cos(endAngle),
+          radius * math.sin(endAngle),
+        );
+
+        final paint = Paint()
+          ..color = ReefConstants.hexagonColor
+          ..strokeWidth = ReefConstants.hexagonStrokeWidth
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round;
+
+        canvas.drawLine(startPoint, endPoint, paint);
+      }
     }
 
-    path.close();
-    canvas.drawPath(path, paint);
-    canvas.restore();
+    // Second pass: Draw all glowing sides (blue) on top
+    for (int i = 0; i < 6; i++) {
+      final isAiming = model.getHexagonSideAiming(i);
+
+      if (isAiming) {
+        final startAngle = i * math.pi / 3 + -math.pi / 6;
+        final endAngle = (i + 1) * math.pi / 3 + -math.pi / 6;
+
+        final startPoint = Offset(
+          radius * math.cos(startAngle),
+          radius * math.sin(startAngle),
+        );
+        final endPoint = Offset(
+          radius * math.cos(endAngle),
+          radius * math.sin(endAngle),
+        );
+
+        // Draw glow effect for aiming sides (blue)
+        final glowPaint = Paint()
+          ..color = ReefConstants.hexagonAimingColor.withOpacity(0.3)
+          ..strokeWidth = ReefConstants.hexagonStrokeWidth * 3
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.0);
+
+        canvas.drawLine(startPoint, endPoint, glowPaint);
+
+        // Draw inner glow
+        final innerGlowPaint = Paint()
+          ..color = ReefConstants.hexagonAimingColor.withOpacity(0.6)
+          ..strokeWidth = ReefConstants.hexagonStrokeWidth * 1.5
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0);
+
+        canvas.drawLine(startPoint, endPoint, innerGlowPaint);
+
+        // Draw the main blue line on top
+        final paint = Paint()
+          ..color = ReefConstants.hexagonAimingColor
+          ..strokeWidth = ReefConstants.hexagonStrokeWidth
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round;
+
+        canvas.drawLine(startPoint, endPoint, paint);
+      }
+    }
   }
 
   void _drawCenterDot(Canvas canvas, Offset center, Size size) {
@@ -315,7 +463,9 @@ class _HexagonPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return oldDelegate is! _HexagonPainter || oldDelegate.model != model;
+  }
 }
 
 // Container for all buttons in the hexagonal layout
