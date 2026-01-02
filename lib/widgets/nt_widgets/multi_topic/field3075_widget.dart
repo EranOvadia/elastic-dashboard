@@ -23,9 +23,9 @@ extension _SizeUtils on Size {
   Offset get toOffset => Offset(width, height);
 
   Size rotateBy(double angle) => Size(
-        (width * cos(angle) - height * sin(angle)).abs(),
-        (height * cos(angle) + width * sin(angle)).abs(),
-      );
+    (width * cos(angle) - height * sin(angle)).abs(),
+    (height * cos(angle) + width * sin(angle)).abs(),
+  );
 }
 
 class Field3075WidgetModel extends MultiTopicNTWidgetModel {
@@ -45,11 +45,11 @@ class Field3075WidgetModel extends MultiTopicNTWidgetModel {
 
   @override
   List<NT4Subscription> get subscriptions => [
-        robotSubscription,
-        coralsSubscription,
-        coralDrive2Subscription,
-        ..._otherObjectSubscriptions,
-      ];
+    robotSubscription,
+    coralsSubscription,
+    coralDrive2Subscription,
+    ..._otherObjectSubscriptions,
+  ];
 
   bool rendered = false;
 
@@ -156,16 +156,15 @@ class Field3075WidgetModel extends MultiTopicNTWidgetModel {
     double fieldRotation = 0.0,
     Color robotColor = Colors.deepPurple,
     Color trajectoryColor = Colors.white,
-    super.dataType,
     super.period,
-  })  : _showTrajectories = showTrajectories,
-        _showOtherObjects = showOtherObjects,
-        _robotWidthMeters = robotWidthMeters,
-        _robotLengthMeters = robotLengthMeters,
-        _fieldRotation = fieldRotation,
-        _robotColor = robotColor,
-        _trajectoryColor = trajectoryColor,
-        super() {
+  }) : _showTrajectories = showTrajectories,
+       _showOtherObjects = showOtherObjects,
+       _robotWidthMeters = robotWidthMeters,
+       _robotLengthMeters = robotLengthMeters,
+       _fieldRotation = fieldRotation,
+       _robotColor = robotColor,
+       _trajectoryColor = trajectoryColor,
+       super() {
     _fieldGame = fieldGame ?? _fieldGame;
 
     if (!FieldImages.hasField(_fieldGame)) {
@@ -183,7 +182,8 @@ class Field3075WidgetModel extends MultiTopicNTWidgetModel {
     _fieldGame = tryCast(jsonData['field_game']) ?? _fieldGame;
 
     _robotWidthMeters = tryCast(jsonData['robot_width']) ?? 0.85;
-    _robotLengthMeters = tryCast(jsonData['robot_length']) ??
+    _robotLengthMeters =
+        tryCast(jsonData['robot_length']) ??
         tryCast(jsonData['robot_height']) ??
         0.85;
 
@@ -216,8 +216,9 @@ class Field3075WidgetModel extends MultiTopicNTWidgetModel {
           !nt4Topic.name.contains('.') &&
           !_otherObjectTopics.contains(nt4Topic.name)) {
         _otherObjectTopics.add(nt4Topic.name);
-        _otherObjectSubscriptions
-            .add(ntConnection.subscribe(nt4Topic.name, super.period));
+        _otherObjectSubscriptions.add(
+          ntConnection.subscribe(nt4Topic.name, super.period),
+        );
         refresh();
       }
     };
@@ -231,8 +232,10 @@ class Field3075WidgetModel extends MultiTopicNTWidgetModel {
 
     robotSubscription = ntConnection.subscribe(robotTopicName, super.period);
     coralsSubscription = ntConnection.subscribe(coralsTopicName, super.period);
-    coralDrive2Subscription =
-        ntConnection.subscribe(coralDrive2TopicName, super.period);
+    coralDrive2Subscription = ntConnection.subscribe(
+      coralDrive2TopicName,
+      super.period,
+    );
   }
 
   @override
@@ -247,8 +250,8 @@ class Field3075WidgetModel extends MultiTopicNTWidgetModel {
   }
 
   @override
-  void disposeWidget({bool deleting = false}) {
-    super.disposeWidget(deleting: deleting);
+  void softDispose({bool deleting = false}) {
+    super.softDispose(deleting: deleting);
 
     if (deleting) {
       _field.dispose();
@@ -291,10 +294,9 @@ class Field3075WidgetModel extends MultiTopicNTWidgetModel {
                       builder: (context) {
                         return Text(
                           _field.sourceURL ?? '',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall!
-                              .copyWith(color: Colors.black),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall!.copyWith(color: Colors.black),
                         );
                       },
                     ),
@@ -521,17 +523,19 @@ class Field3075Widget extends NTWidget {
     }
     double xFromCenter =
         (x * model.field.pixelsPerMeterHorizontal - fieldCenter.dx) *
-            scaleReduction;
+        scaleReduction;
 
     double yFromCenter =
         (fieldCenter.dy - (y * model.field.pixelsPerMeterVertical)) *
-            scaleReduction;
+        scaleReduction;
 
-    double width = (objectSize?.width ?? model.otherObjectSize) *
+    double width =
+        (objectSize?.width ?? model.otherObjectSize) *
         model.field.pixelsPerMeterHorizontal *
         scaleReduction;
 
-    double length = (objectSize?.height ?? model.otherObjectSize) *
+    double length =
+        (objectSize?.height ?? model.otherObjectSize) *
         model.field.pixelsPerMeterVertical *
         scaleReduction;
 
@@ -590,11 +594,11 @@ class Field3075Widget extends NTWidget {
 
     double xFromCenter =
         (x * model.field.pixelsPerMeterHorizontal - fieldCenter.dx) *
-            scaleReduction;
+        scaleReduction;
 
     double yFromCenter =
         (fieldCenter.dy - (y * model.field.pixelsPerMeterVertical)) *
-            scaleReduction;
+        scaleReduction;
 
     double width =
         objectWidth * model.field.pixelsPerMeterHorizontal * scaleReduction;
@@ -644,11 +648,11 @@ class Field3075Widget extends NTWidget {
 
     double xFromCenter =
         (x * model.field.pixelsPerMeterHorizontal - fieldCenter.dx) *
-            scaleReduction;
+        scaleReduction;
 
     double yFromCenter =
         (fieldCenter.dy - (y * model.field.pixelsPerMeterVertical)) *
-            scaleReduction;
+        scaleReduction;
 
     double width =
         objectWidth * model.field.pixelsPerMeterHorizontal * scaleReduction;
@@ -665,8 +669,9 @@ class Field3075Widget extends NTWidget {
         minHeight: 4.0,
       ),
       decoration: BoxDecoration(
-          color: const Color.fromARGB(255, 228, 115, 35),
-          shape: BoxShape.circle),
+        color: const Color.fromARGB(255, 228, 115, 35),
+        shape: BoxShape.circle,
+      ),
       width: length,
       height: width,
     );
@@ -677,10 +682,6 @@ class Field3075Widget extends NTWidget {
       child: coralDrive2,
     );
   }
-
-
-
-  
 
   Offset _getTrajectoryPointOffset(
     Field3075WidgetModel model, {
@@ -697,23 +698,27 @@ class Field3075Widget extends NTWidget {
     }
     double xFromCenter =
         (x * model.field.pixelsPerMeterHorizontal - fieldCenter.dx) *
-            scaleReduction;
+        scaleReduction;
 
     double yFromCenter =
         (fieldCenter.dy - (y * model.field.pixelsPerMeterVertical)) *
-            scaleReduction;
+        scaleReduction;
 
     return Offset(xFromCenter, yFromCenter);
   }
 
   List<Pose> getPosesFromSub(
-      Field3075WidgetModel model, NT4Subscription sub, String topic) {
+    Field3075WidgetModel model,
+    NT4Subscription sub,
+    String topic,
+  ) {
     List<Pose> result = [];
     List<Object?> objectPositionsRaw =
         sub.value?.tryCast<List<Object?>>() ?? [];
 
-    List<double> objectPositions =
-        objectPositionsRaw.whereType<double>().toList();
+    List<double> objectPositions = objectPositionsRaw
+        .whereType<double>()
+        .toList();
 
     for (int i = 0; i < objectPositions.length; i += 3) {
       double objectX = objectPositions[i];
@@ -736,144 +741,163 @@ class Field3075Widget extends NTWidget {
       listeners.addAll(model._otherObjectSubscriptions);
     }
 
-    return LayoutBuilder(builder: (context, constraints) {
-      return ListenableBuilder(
-        listenable: Listenable.merge(listeners),
-        child: model.field.fieldImage,
-        builder: (context, child) {
-          List<Object?> robotPositionRaw =
-              model.robotSubscription.value?.tryCast<List<Object?>>() ?? [];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return ListenableBuilder(
+          listenable: Listenable.merge(listeners),
+          child: model.field.fieldImage,
+          builder: (context, child) {
+            List<Object?> robotPositionRaw =
+                model.robotSubscription.value?.tryCast<List<Object?>>() ?? [];
 
-          double robotX = 0;
-          double robotY = 0;
-          double robotTheta = 0;
+            double robotX = 0;
+            double robotY = 0;
+            double robotTheta = 0;
 
-          if (model.isPoseStruct(model.robotTopicName)) {
-            List<int> poseBytes = robotPositionRaw.whereType<int>().toList();
-            Pose2dStruct poseStruct =
-                Pose2dStruct.valueFromBytes(Uint8List.fromList(poseBytes));
+            if (model.isPoseStruct(model.robotTopicName)) {
+              List<int> poseBytes = robotPositionRaw.whereType<int>().toList();
+              Pose2dStruct poseStruct = Pose2dStruct.valueFromBytes(
+                Uint8List.fromList(poseBytes),
+              );
 
-            robotX = poseStruct.x;
-            robotY = poseStruct.y;
-            robotTheta = poseStruct.angle;
-          } else {
-            List<double> robotPosition =
-                robotPositionRaw.whereType<double>().toList();
+              robotX = poseStruct.x;
+              robotY = poseStruct.y;
+              robotTheta = poseStruct.angle;
+            } else {
+              List<double> robotPosition = robotPositionRaw
+                  .whereType<double>()
+                  .toList();
 
-            if (robotPosition.length >= 3) {
-              robotX = robotPosition[0];
-              robotY = robotPosition[1];
-              robotTheta = radians(robotPosition[2]);
+              if (robotPosition.length >= 3) {
+                robotX = robotPosition[0];
+                robotY = robotPosition[1];
+                robotTheta = radians(robotPosition[2]);
+              }
             }
-          }
-        
 
-          List<Pose> coralsPose = getPosesFromSub(
-              model, model.coralsSubscription, model.coralsTopicName);
-         
-          List<Pose> coralDrive2Pose = getPosesFromSub(
-              model, model.coralDrive2Subscription, model.coralDrive2TopicName);
+            List<Pose> coralsPose = getPosesFromSub(
+              model,
+              model.coralsSubscription,
+              model.coralsTopicName,
+            );
 
-          // #region Rotation fix size
-          Size size = Size(constraints.maxWidth, constraints.maxHeight);
-          model.widgetSize = size;
+            List<Pose> coralDrive2Pose = getPosesFromSub(
+              model,
+              model.coralDrive2Subscription,
+              model.coralDrive2TopicName,
+            );
 
-          FittedSizes fittedSizes = applyBoxFit(
-            BoxFit.contain,
-            model.field.fieldImageSize ?? const Size(0, 0),
-            size,
-          );
+            // #region Rotation fix size
+            Size size = Size(constraints.maxWidth, constraints.maxHeight);
+            model.widgetSize = size;
 
-          FittedSizes rotatedFittedSizes = applyBoxFit(
-            BoxFit.contain,
-            model.field.fieldImageSize
-                    ?.rotateBy(-radians(model.fieldRotation)) ??
-                const Size(0, 0),
-            size,
-          );
+            FittedSizes fittedSizes = applyBoxFit(
+              BoxFit.contain,
+              model.field.fieldImageSize ?? const Size(0, 0),
+              size,
+            );
 
-          Offset fittedCenter = fittedSizes.destination.toOffset / 2;
-          Offset fieldCenter = model.field.center;
+            FittedSizes rotatedFittedSizes = applyBoxFit(
+              BoxFit.contain,
+              model.field.fieldImageSize?.rotateBy(
+                    -radians(model.fieldRotation),
+                  ) ??
+                  const Size(0, 0),
+              size,
+            );
 
-          double scaleReduction =
-              (fittedSizes.destination.width / fittedSizes.source.width);
-          double rotatedScaleReduction = (rotatedFittedSizes.destination.width /
-              rotatedFittedSizes.source.width);
+            Offset fittedCenter = fittedSizes.destination.toOffset / 2;
+            Offset fieldCenter = model.field.center;
 
-          if (scaleReduction.isNaN) {
-            scaleReduction = 0;
-          }
-          if (rotatedScaleReduction.isNaN) {
-            rotatedScaleReduction = 0;
-          }
-          // #endregion
+            double scaleReduction =
+                (fittedSizes.destination.width / fittedSizes.source.width);
+            double rotatedScaleReduction =
+                (rotatedFittedSizes.destination.width /
+                rotatedFittedSizes.source.width);
 
-          Widget robot = _getTransformedFieldObject(
-            model,
-            x: robotX,
-            y: robotY,
-            angleRadians: robotTheta,
-            fieldCenter: fieldCenter,
-            scaleReduction: scaleReduction,
-            objectSize: Size(model.robotWidthMeters, model.robotLengthMeters),
-          );
+            if (scaleReduction.isNaN) {
+              scaleReduction = 0;
+            }
+            if (rotatedScaleReduction.isNaN) {
+              rotatedScaleReduction = 0;
+            }
+            // #endregion
 
-          List<Widget> coralDrive2 = [];
-          for (int i = 0; i < coralDrive2Pose.length; i++) {
-            coralDrive2.add(_getTransformedFieldCoralDrive2(model,
-                x: coralDrive2Pose.elementAt(i).x,
-                y: coralDrive2Pose.elementAt(i).y,
-                angleRadians: coralDrive2Pose.elementAt(i).theta,
-                fieldCenter: fieldCenter,
-                scaleReduction: scaleReduction));
-          }
+            Widget robot = _getTransformedFieldObject(
+              model,
+              x: robotX,
+              y: robotY,
+              angleRadians: robotTheta,
+              fieldCenter: fieldCenter,
+              scaleReduction: scaleReduction,
+              objectSize: Size(model.robotWidthMeters, model.robotLengthMeters),
+            );
 
-          List<Widget> corals = [];
-          for (int i = 0; i < coralsPose.length; i++) {
-            if (!(coralDrive2Pose.length == 1 && (
-              coralDrive2Pose.elementAt(0).x != coralsPose.elementAt(i).x ||
-              coralDrive2Pose.elementAt(0).y != coralsPose.elementAt(i).y ||
-              coralDrive2Pose.elementAt(0).theta != coralsPose.elementAt(i).theta
-              ))) {
-              corals.add(_getTransformedFieldCoral(model,
-                  x: coralsPose.elementAt(i).x,
-                  y: coralsPose.elementAt(i).y,
-                  angleRadians: coralsPose.elementAt(i).theta,
+            List<Widget> coralDrive2 = [];
+            for (int i = 0; i < coralDrive2Pose.length; i++) {
+              coralDrive2.add(
+                _getTransformedFieldCoralDrive2(
+                  model,
+                  x: coralDrive2Pose.elementAt(i).x,
+                  y: coralDrive2Pose.elementAt(i).y,
+                  angleRadians: coralDrive2Pose.elementAt(i).theta,
                   fieldCenter: fieldCenter,
-                  scaleReduction: scaleReduction));
-            }
-          }
-    
-
-          return ListenableBuilder(
-            listenable: Listenable.merge(listeners),
-            child: model.field.fieldImage,
-            builder: (context, child) {
-              return Transform.scale(
-                scale: rotatedScaleReduction / scaleReduction,
-                child: Transform.rotate(
-                  angle: radians(model.fieldRotation),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      SizedBox(
-                        width: fittedSizes.destination.width,
-                        height: fittedSizes.destination.height,
-                        child: child!,
-                      ),
-                      robot,
-                      ...coralDrive2,
-                      ...corals,
-                      
-                    ],
-                  ),
+                  scaleReduction: scaleReduction,
                 ),
               );
-            },
-          );
-        },
-      );
-    });
+            }
+
+            List<Widget> corals = [];
+            for (int i = 0; i < coralsPose.length; i++) {
+              if (!(coralDrive2Pose.length == 1 &&
+                  (coralDrive2Pose.elementAt(0).x !=
+                          coralsPose.elementAt(i).x ||
+                      coralDrive2Pose.elementAt(0).y !=
+                          coralsPose.elementAt(i).y ||
+                      coralDrive2Pose.elementAt(0).theta !=
+                          coralsPose.elementAt(i).theta))) {
+                corals.add(
+                  _getTransformedFieldCoral(
+                    model,
+                    x: coralsPose.elementAt(i).x,
+                    y: coralsPose.elementAt(i).y,
+                    angleRadians: coralsPose.elementAt(i).theta,
+                    fieldCenter: fieldCenter,
+                    scaleReduction: scaleReduction,
+                  ),
+                );
+              }
+            }
+
+            return ListenableBuilder(
+              listenable: Listenable.merge(listeners),
+              child: model.field.fieldImage,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: rotatedScaleReduction / scaleReduction,
+                  child: Transform.rotate(
+                    angle: radians(model.fieldRotation),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        SizedBox(
+                          width: fittedSizes.destination.width,
+                          height: fittedSizes.destination.height,
+                          child: child!,
+                        ),
+                        robot,
+                        ...coralDrive2,
+                        ...corals,
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
   }
 }
 

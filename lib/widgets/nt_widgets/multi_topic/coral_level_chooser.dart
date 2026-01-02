@@ -1,3 +1,4 @@
+import 'package:elastic_dashboard/services/nt4_type.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -24,11 +25,11 @@ class CoralLevelChooserModel extends MultiTopicNTWidgetModel {
 
   @override
   List<NT4Subscription> get subscriptions => [
-        optionsSubscription,
-        selectedSubscription,
-        activeSubscription,
-        defaultSubscription,
-      ];
+    optionsSubscription,
+    selectedSubscription,
+    activeSubscription,
+    defaultSubscription,
+  ];
 
   late Listenable chooserStateListenable;
 
@@ -57,10 +58,9 @@ class CoralLevelChooserModel extends MultiTopicNTWidgetModel {
     required super.preferences,
     required super.topic,
     bool sortOptions = false,
-    super.dataType,
     super.period,
-  })  : _sortOptions = sortOptions,
-        super();
+  }) : _sortOptions = sortOptions,
+       super();
 
   CoralLevelChooserModel.fromJson({
     required super.ntConnection,
@@ -72,13 +72,19 @@ class CoralLevelChooserModel extends MultiTopicNTWidgetModel {
 
   @override
   void initializeSubscriptions() {
-    optionsSubscription =
-        ntConnection.subscribe(optionsTopicName, super.period);
-    selectedSubscription =
-        ntConnection.subscribe(selectedTopicName, super.period);
+    optionsSubscription = ntConnection.subscribe(
+      optionsTopicName,
+      super.period,
+    );
+    selectedSubscription = ntConnection.subscribe(
+      selectedTopicName,
+      super.period,
+    );
     activeSubscription = ntConnection.subscribe(activeTopicName, super.period);
-    defaultSubscription =
-        ntConnection.subscribe(defaultTopicName, super.period);
+    defaultSubscription = ntConnection.subscribe(
+      defaultTopicName,
+      super.period,
+    );
     chooserStateListenable = Listenable.merge(subscriptions);
     chooserStateListenable.addListener(onChooserStateUpdate);
 
@@ -122,8 +128,8 @@ class CoralLevelChooserModel extends MultiTopicNTWidgetModel {
   }
 
   void onChooserStateUpdate() {
-    List<Object?>? rawOptions =
-        optionsSubscription.value?.tryCast<List<Object?>>();
+    List<Object?>? rawOptions = optionsSubscription.value
+        ?.tryCast<List<Object?>>();
 
     List<String>? currentOptions = rawOptions?.whereType<String>().toList();
 
@@ -146,7 +152,8 @@ class CoralLevelChooserModel extends MultiTopicNTWidgetModel {
       currentDefault = null;
     }
 
-    bool hasValue = currentOptions != null ||
+    bool hasValue =
+        currentOptions != null ||
         currentActive != null ||
         currentDefault != null;
 
@@ -195,7 +202,7 @@ class CoralLevelChooserModel extends MultiTopicNTWidgetModel {
     } else {
       _selectedTopic = ntConnection.publishNewTopic(
         selectedTopicName,
-        NT4TypeStr.kString,
+        NT4Type.string(),
         properties: {
           'retained': true,
         },
@@ -296,8 +303,9 @@ class CoralLevelChooser extends NTWidget {
                     model.indexCurrnetOption =
                         model.previousOptions!.length - 1;
                   }
-                  model.publishSelectedValue(model.previousOptions
-                      ?.elementAt(model.indexCurrnetOption));
+                  model.publishSelectedValue(
+                    model.previousOptions?.elementAt(model.indexCurrnetOption),
+                  );
                 },
               ),
             ),
@@ -338,10 +346,16 @@ class _CoralLevel extends StatelessWidget {
         child: Row(
           children: [
             _createIncrementDicrementButton(
-                Icons.remove, Colors.red, () => onValueChanged(-1)),
+              Icons.remove,
+              Colors.red,
+              () => onValueChanged(-1),
+            ),
             Text("L" + (selected ?? ''), textScaleFactor: 3),
             _createIncrementDicrementButton(
-                Icons.add, Colors.green, () => onValueChanged(1))
+              Icons.add,
+              Colors.green,
+              () => onValueChanged(1),
+            ),
           ],
         ),
       ),
@@ -349,7 +363,10 @@ class _CoralLevel extends StatelessWidget {
   }
 
   Widget _createIncrementDicrementButton(
-      IconData icon, Color color, VoidCallback? onPressed) {
+    IconData icon,
+    Color color,
+    VoidCallback? onPressed,
+  ) {
     return RawMaterialButton(
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       constraints: BoxConstraints(minWidth: 20.0, minHeight: 20.0),

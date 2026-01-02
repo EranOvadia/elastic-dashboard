@@ -1,3 +1,4 @@
+import 'package:elastic_dashboard/services/nt4_type.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
@@ -47,32 +48,32 @@ class ReefModel extends MultiTopicNTWidgetModel {
 
   // Get button status from NetworkTables data
   ButtonStatus getButtonStatus(int buttonIndex) {
-  if (buttonIndex < 0 || buttonIndex >= ReefConstants.totalButtons) {
-    return ButtonStatus.Empty;
+    if (buttonIndex < 0 || buttonIndex >= ReefConstants.totalButtons) {
+      return ButtonStatus.Empty;
+    }
+
+    final branchData = branchesSub.value;
+    if (branchData is! List || buttonIndex >= branchData.length) {
+      return ButtonStatus.Empty;
+    }
+
+    // Only shift edge buttons (indexes 35-41)
+    int arrayIndex = buttonIndex;
+    if (buttonIndex >= 36 && buttonIndex <= 41) {
+      // Shift edge buttons: 35->36, 36->37, 37->38, 38->39, 39->40, 40->41, 41->35
+      arrayIndex = buttonIndex == 41 ? 36 : buttonIndex + 1;
+    }
+
+    final value = branchData[arrayIndex];
+    final intValue = switch (value) {
+      int v => v,
+      String v => int.tryParse(v) ?? 0,
+      double v => v.toInt(),
+      _ => 0,
+    };
+
+    return ButtonStatus.fromInt(intValue);
   }
-
-  final branchData = branchesSub.value;
-  if (branchData is! List || buttonIndex >= branchData.length) {
-    return ButtonStatus.Empty;
-  }
-
-  // Only shift edge buttons (indexes 35-41)
-  int arrayIndex = buttonIndex;
-  if (buttonIndex >= 36 && buttonIndex <= 41) {
-    // Shift edge buttons: 35->36, 36->37, 37->38, 38->39, 39->40, 40->41, 41->35
-    arrayIndex = buttonIndex == 41 ? 36 : buttonIndex + 1;
-  }
-
-  final value = branchData[arrayIndex];
-  final intValue = switch (value) {
-    int v => v,
-    String v => int.tryParse(v) ?? 0,
-    double v => v.toInt(),
-    _ => 0,
-  };
-
-  return ButtonStatus.fromInt(intValue);
-}
 
   // Get hexagon side aiming status with custom mapping
   // Custom mapping: side 0 -> index 42, side 1 -> index 45, side 2 -> index 44,
@@ -108,19 +109,29 @@ class ReefModel extends MultiTopicNTWidgetModel {
   // Helper method to map side index to array index
   int _getArrayIndexForSide(int sideIndex) {
     switch (sideIndex) {
-      case 4: return 42; // side 0 -> index 42
-      case 5: return 43; // side 1 -> index 45 (swapped)
-      case 0: return 44; // side 2 -> index 44
-      case 1: return 45; // side 3 -> index 43 (swapped)
-      case 2: return 46; // side 4 -> index 46
-      case 3: return 47; // side 5 -> index 47
-      default: return 42;
+      case 4:
+        return 42; // side 0 -> index 42
+      case 5:
+        return 43; // side 1 -> index 45 (swapped)
+      case 0:
+        return 44; // side 2 -> index 44
+      case 1:
+        return 45; // side 3 -> index 43 (swapped)
+      case 2:
+        return 46; // side 4 -> index 46
+      case 3:
+        return 47; // side 5 -> index 47
+      default:
+        return 42;
     }
   }
 
   // Get or create NetworkTables topics with caching
-  NT4Topic _getOrCreateTopic(String topicName, String dataType,
-      {Map<String, dynamic>? properties}) {
+  NT4Topic _getOrCreateTopic(
+    String topicName,
+    String dataType, {
+    Map<String, dynamic>? properties,
+  }) {
     // Check cache first
     if (_publishedTopics.containsKey(topicName)) {
       return _publishedTopics[topicName]!;
@@ -142,8 +153,9 @@ class ReefModel extends MultiTopicNTWidgetModel {
     // Create new topic
     final newTopic = ntConnection.publishNewTopic(
       topicName,
-      dataType,
-      properties: properties ??
+      NT4Type.string(),
+      properties:
+          properties ??
           {'retained': false}, // NT client cann't create a retained topic
     );
 
@@ -153,46 +165,46 @@ class ReefModel extends MultiTopicNTWidgetModel {
 
   // Send current button states to dashboard topic
   void sendButtonsModesArray() {
-  if (!ntConnection.isNT4Connected) {
-    return;
-  }
+    if (!ntConnection.isNT4Connected) {
+      return;
+    }
 
-  try {
-    // Create array with button modes + hexagon side aiming states
-    final List<dynamic> allModes = List<int>.generate(
-      ReefConstants.totalArraySize,
-      (index) {
-        if (index < ReefConstants.totalButtons) {
-          // For edge button array indexes (35-41), we need to reverse the shift
-          int uiButtonIndex = index;
-          if (index >= 36 && index <= 41) {
-            // Reverse shift: 35->41, 36->35, 37->36, 38->37, 39->38, 40->39, 41->40
-            uiButtonIndex = index == 36 ? 41 : index - 1;
+    try {
+      // Create array with button modes + hexagon side aiming states
+      final List<dynamic> allModes = List<int>.generate(
+        ReefConstants.totalArraySize,
+        (index) {
+          if (index < ReefConstants.totalButtons) {
+            // For edge button array indexes (35-41), we need to reverse the shift
+            int uiButtonIndex = index;
+            if (index >= 36 && index <= 41) {
+              // Reverse shift: 35->41, 36->35, 37->36, 38->37, 39->38, 40->39, 41->40
+              uiButtonIndex = index == 36 ? 41 : index - 1;
+            }
+            return getButtonStatus(uiButtonIndex).value;
+          } else {
+            // For hexagon indices (42-47), we need to determine which side they represent
+            // and get the aiming status for that side
+            final sideIndex = switch (index) {
+              42 => 0, // index 42 -> side 0
+              43 => 3, // index 43 -> side 3 (swapped)
+              44 => 2, // index 44 -> side 2
+              45 => 1, // index 45 -> side 1 (swapped)
+              46 => 4, // index 46 -> side 4
+              47 => 5, // index 47 -> side 5
+              _ => 0,
+            };
+            return getHexagonSideAiming(sideIndex) ? 1 : 0;
           }
-          return getButtonStatus(uiButtonIndex).value;
-        } else {
-          // For hexagon indices (42-47), we need to determine which side they represent
-          // and get the aiming status for that side
-          final sideIndex = switch (index) {
-            42 => 0, // index 42 -> side 0
-            43 => 3, // index 43 -> side 3 (swapped)
-            44 => 2, // index 44 -> side 2
-            45 => 1, // index 45 -> side 1 (swapped)
-            46 => 4, // index 46 -> side 4
-            47 => 5, // index 47 -> side 5
-            _ => 0,
-          };
-          return getHexagonSideAiming(sideIndex) ? 1 : 0;
-        }
-      },
-    );
+        },
+      );
 
-    final topic = _getOrCreateTopic(topicName, 'int[]');
-    ntConnection.updateDataFromTopic(topic, allModes);
-  } catch (e) {
-    debugPrint('Error sending button modes array: $e');
+      final topic = _getOrCreateTopic(topicName, 'int[]');
+      ntConnection.updateDataFromTopic(topic, allModes);
+    } catch (e) {
+      debugPrint('Error sending button modes array: $e');
+    }
   }
-}
 
   // Publish branch status array to NetworkTables
   void _publishBranchStatus(List<dynamic> branchList) {
@@ -213,7 +225,6 @@ class ReefModel extends MultiTopicNTWidgetModel {
     required super.ntConnection,
     required super.preferences,
     required super.topic,
-    super.dataType,
     super.period,
   }) : super();
 
@@ -265,38 +276,38 @@ class ReefModel extends MultiTopicNTWidgetModel {
 
   // Update individual button status
   void _updateButtonStatus(int buttonIndex, int newStatus) {
-  final currentBranchData = branchesSub.value;
-  List<dynamic> branchList;
+    final currentBranchData = branchesSub.value;
+    List<dynamic> branchList;
 
-  if (currentBranchData is List) {
-    branchList = List.from(currentBranchData);
-  } else {
-    branchList = List.filled(ReefConstants.totalArraySize, 0);
-  }
+    if (currentBranchData is List) {
+      branchList = List.from(currentBranchData);
+    } else {
+      branchList = List.filled(ReefConstants.totalArraySize, 0);
+    }
 
-  // Ensure array is large enough for all elements (buttons + hexagon sides)
-  while (branchList.length < ReefConstants.totalArraySize) {
-    branchList.add(0);
-  }
+    // Ensure array is large enough for all elements (buttons + hexagon sides)
+    while (branchList.length < ReefConstants.totalArraySize) {
+      branchList.add(0);
+    }
 
-  // Only shift edge buttons (indexes 35-41)
-  int arrayIndex = buttonIndex;
-  if (buttonIndex >= 36 && buttonIndex <= 41) {
-    // Shift edge buttons: 35->36, 36->37, 37->38, 38->39, 39->40, 40->41, 41->35
-    arrayIndex = buttonIndex == 41 ? 36 : buttonIndex + 1;
-  }
+    // Only shift edge buttons (indexes 35-41)
+    int arrayIndex = buttonIndex;
+    if (buttonIndex >= 36 && buttonIndex <= 41) {
+      // Shift edge buttons: 35->36, 36->37, 37->38, 38->39, 39->40, 40->41, 41->35
+      arrayIndex = buttonIndex == 41 ? 36 : buttonIndex + 1;
+    }
 
-  branchList[arrayIndex] = newStatus;
+    branchList[arrayIndex] = newStatus;
 
-  if (ntConnection.isNT4Connected) {
-    try {
-      _publishBranchStatus(branchList);
-      Future.microtask(() => sendButtonsModesArray());
-    } catch (e) {
-      debugPrint('Error updating button status: $e');
+    if (ntConnection.isNT4Connected) {
+      try {
+        _publishBranchStatus(branchList);
+        Future.microtask(() => sendButtonsModesArray());
+      } catch (e) {
+        debugPrint('Error updating button status: $e');
+      }
     }
   }
-}
 }
 
 class Reef extends NTWidget {
@@ -524,7 +535,8 @@ class _ButtonLayout extends StatelessWidget {
   // Create 6 faces of buttons around the hexagon
   List<Widget> _buildFaceButtons(_LayoutConfig config) {
     return List.generate(ReefConstants.facesCount, (face) {
-      final angle = -math.pi / 2 +
+      final angle =
+          -math.pi / 2 +
           face * (math.pi / 3) +
           math.pi / 6 +
           ReefConstants.globalRotation;
@@ -580,13 +592,12 @@ class _LayoutConfig {
   final double hexagonRadius;
 
   _LayoutConfig(BoxConstraints constraints)
-      : widgetSize = math.min(constraints.maxWidth, constraints.maxHeight),
-        buttonSize =
-            math.min(constraints.maxWidth, constraints.maxHeight) * 0.08,
-        offsetFromCenter =
-            math.min(constraints.maxWidth, constraints.maxHeight) * 0.38,
-        hexagonRadius =
-            math.min(constraints.maxWidth, constraints.maxHeight) * 0.15;
+    : widgetSize = math.min(constraints.maxWidth, constraints.maxHeight),
+      buttonSize = math.min(constraints.maxWidth, constraints.maxHeight) * 0.08,
+      offsetFromCenter =
+          math.min(constraints.maxWidth, constraints.maxHeight) * 0.38,
+      hexagonRadius =
+          math.min(constraints.maxWidth, constraints.maxHeight) * 0.15;
 }
 
 // 2x3 grid of buttons for each hexagon face
