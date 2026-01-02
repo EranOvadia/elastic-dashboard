@@ -19,9 +19,9 @@ class CommandModel extends MultiTopicNTWidgetModel {
 
   @override
   List<NT4Subscription> get subscriptions => [
-        runningSubscription,
-        nameSubscription,
-      ];
+    runningSubscription,
+    nameSubscription,
+  ];
 
   NT4Topic? runningTopic;
 
@@ -49,11 +49,10 @@ class CommandModel extends MultiTopicNTWidgetModel {
     required super.topic,
     bool showType = true,
     bool maximizeButtonSpace = false,
-    super.dataType,
     super.period,
-  })  : _showType = showType,
-        _maximizeButtonSpace = maximizeButtonSpace,
-        super();
+  }) : _showType = showType,
+       _maximizeButtonSpace = maximizeButtonSpace,
+       super();
 
   CommandModel.fromJson({
     required super.ntConnection,
@@ -67,8 +66,10 @@ class CommandModel extends MultiTopicNTWidgetModel {
 
   @override
   void initializeSubscriptions() {
-    runningSubscription =
-        ntConnection.subscribe(runningTopicName, super.period);
+    runningSubscription = ntConnection.subscribe(
+      runningTopicName,
+      super.period,
+    );
     nameSubscription = ntConnection.subscribe(nameTopicName, super.period);
   }
 
@@ -80,41 +81,37 @@ class CommandModel extends MultiTopicNTWidgetModel {
   }
 
   @override
-  Map<String, dynamic> toJson() {
-    return {
-      ...super.toJson(),
-      'show_type': showType,
-      'maximize_button_space': maximizeButtonSpace,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+    ...super.toJson(),
+    'show_type': showType,
+    'maximize_button_space': maximizeButtonSpace,
+  };
 
   @override
-  List<Widget> getEditProperties(BuildContext context) {
-    return [
-      Row(
-        children: [
-          Flexible(
-            child: DialogToggleSwitch(
-              label: 'Show Type',
-              initialValue: _showType,
-              onToggle: (value) {
-                showType = value;
-              },
-            ),
+  List<Widget> getEditProperties(BuildContext context) => [
+    Row(
+      children: [
+        Flexible(
+          child: DialogToggleSwitch(
+            label: 'Show Type',
+            initialValue: _showType,
+            onToggle: (value) {
+              showType = value;
+            },
           ),
-          Flexible(
-            child: DialogToggleSwitch(
-              label: 'Maximize Button Space',
-              initialValue: _maximizeButtonSpace,
-              onToggle: (value) {
-                maximizeButtonSpace = value;
-              },
-            ),
+        ),
+        Flexible(
+          child: DialogToggleSwitch(
+            label: 'Maximize Button Space',
+            initialValue: _maximizeButtonSpace,
+            onToggle: (value) {
+              maximizeButtonSpace = value;
+            },
           ),
-        ],
-      ),
-    ];
-  }
+        ),
+      ],
+    ),
+  ];
 }
 
 class CommandWidget extends NTWidget {
@@ -134,8 +131,9 @@ class CommandWidget extends NTWidget {
       onTapUp: (_) {
         bool publishTopic = model.runningTopic == null;
 
-        model.runningTopic ??=
-            model.ntConnection.getTopicFromName(model.runningTopicName);
+        model.runningTopic ??= model.ntConnection.getTopicFromName(
+          model.runningTopicName,
+        );
 
         if (model.runningTopic == null) {
           return;

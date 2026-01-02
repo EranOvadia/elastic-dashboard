@@ -5,8 +5,9 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:elastic_dashboard/services/nt4_client.dart';
+import 'package:elastic_dashboard/services/nt4_type.dart';
 import 'package:elastic_dashboard/services/nt_connection.dart';
-import 'package:elastic_dashboard/services/nt_widget_builder.dart';
+import 'package:elastic_dashboard/services/nt_widget_registry.dart';
 import 'package:elastic_dashboard/widgets/dialog_widgets/dialog_toggle_switch.dart';
 import 'package:elastic_dashboard/widgets/draggable_containers/draggable_nt_widget_container.dart';
 import 'package:elastic_dashboard/widgets/draggable_containers/models/nt_widget_container_model.dart';
@@ -35,12 +36,12 @@ void main() {
       virtualTopics: [
         NT4Topic(
           name: 'Test/Command/running',
-          type: NT4TypeStr.kBool,
+          type: NT4Type.boolean(),
           properties: {},
         ),
         NT4Topic(
           name: 'Test/Command/name',
-          type: NT4TypeStr.kString,
+          type: NT4Type.string(),
           properties: {},
         ),
       ],
@@ -52,7 +53,7 @@ void main() {
   });
 
   test('Command widget from json', () {
-    NTWidgetModel commandModel = NTWidgetBuilder.buildNTModelFromJson(
+    NTWidgetModel commandModel = NTWidgetRegistry.buildNTModelFromJson(
       ntConnection,
       preferences,
       'Command',
@@ -86,7 +87,7 @@ void main() {
   testWidgets('Command widget test', (widgetTester) async {
     FlutterError.onError = ignoreOverflowErrors;
 
-    NTWidgetModel commandModel = NTWidgetBuilder.buildNTModelFromJson(
+    NTWidgetModel commandModel = NTWidgetRegistry.buildNTModelFromJson(
       ntConnection,
       preferences,
       'Command',
@@ -173,42 +174,32 @@ void main() {
     expect(showType, findsOneWidget);
 
     await widgetTester.tap(
-      find.descendant(
-        of: showType,
-        matching: find.byType(Switch),
-      ),
+      find.descendant(of: showType, matching: find.byType(Switch)),
     );
     await widgetTester.pumpAndSettle();
     expect(commandModel.showType, false);
 
     await widgetTester.tap(
-      find.descendant(
-        of: showType,
-        matching: find.byType(Switch),
-      ),
+      find.descendant(of: showType, matching: find.byType(Switch)),
     );
     await widgetTester.pumpAndSettle();
     expect(commandModel.showType, true);
 
-    final maximizeSpace =
-        find.widgetWithText(DialogToggleSwitch, 'Maximize Button Space');
+    final maximizeSpace = find.widgetWithText(
+      DialogToggleSwitch,
+      'Maximize Button Space',
+    );
 
     expect(maximizeSpace, findsOneWidget);
 
     await widgetTester.tap(
-      find.descendant(
-        of: maximizeSpace,
-        matching: find.byType(Switch),
-      ),
+      find.descendant(of: maximizeSpace, matching: find.byType(Switch)),
     );
     await widgetTester.pumpAndSettle();
     expect(commandModel.maximizeButtonSpace, false);
 
     await widgetTester.tap(
-      find.descendant(
-        of: maximizeSpace,
-        matching: find.byType(Switch),
-      ),
+      find.descendant(of: maximizeSpace, matching: find.byType(Switch)),
     );
     await widgetTester.pumpAndSettle();
     expect(commandModel.maximizeButtonSpace, true);
