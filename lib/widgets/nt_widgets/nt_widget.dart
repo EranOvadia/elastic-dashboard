@@ -1,3 +1,4 @@
+import 'package:elastic_dashboard/widgets/nt_widgets/multi_topic/pitcher.dart';
 import 'package:flutter/material.dart';
 
 import 'package:dot_cast/dot_cast.dart';
@@ -199,6 +200,7 @@ class SingleTopicNTWidgetModel extends NTWidgetModel {
         RadialGaugeWidget.widgetType,
         GraphWidget.widgetType,
         MatchTimeWidget.widgetType,
+        Pitcher.widgetType,
       ]);
     }
 
@@ -354,8 +356,16 @@ class MultiTopicNTWidgetModel extends NTWidgetModel {
   @override
   List<String> getAvailableDisplayTypes() {
     if (type == ComboBoxChooser.widgetType ||
-        type == SplitButtonChooser.widgetType || type == 'CoralLevel Chooser') {
-      return [ComboBoxChooser.widgetType, SplitButtonChooser.widgetType, 'CoralLevel Chooser'];
+        type == SplitButtonChooser.widgetType ||
+        type == 'CoralLevel Chooser') {
+      return [
+        ComboBoxChooser.widgetType,
+        SplitButtonChooser.widgetType,
+        'CoralLevel Chooser',
+      ];
+    }
+    if (type == "Pitcher") {
+      return ["Pitcher"];
     }
 
     return [type];
