@@ -15,8 +15,6 @@ import 'package:elastic_dashboard/widgets/nt_widgets/nt_widget.dart';
 class VoltageViewModel extends SingleTopicNTWidgetModel {
   @override
   String type = VoltageView.widgetType;
-  @override
-  Size get minSize => const Size(80, 80);
 
   double _minValue = 4.0;
   double _maxValue = 13.0;

@@ -46,7 +46,6 @@ import 'package:elastic_dashboard/widgets/nt_widgets/single_topic/text_display.d
 import 'package:elastic_dashboard/widgets/nt_widgets/single_topic/toggle_button.dart';
 import 'package:elastic_dashboard/widgets/nt_widgets/single_topic/toggle_switch.dart';
 import 'package:elastic_dashboard/widgets/nt_widgets/single_topic/voltage_view.dart';
-import 'package:elastic_dashboard/widgets/nt_widgets/multi_topic/pitcher.dart';
 
 typedef NTModelJsonProvider<T extends NTWidgetModel> =
     T Function({
@@ -147,14 +146,6 @@ class NTWidgetRegistry {
       fromJson: RadialGaugeModel.fromJson,
       minWidth: _normalSize * 1.6,
       minHeight: _normalSize * 1.6,
-    );
-    registerSingleTopic(
-      name: Pitcher.widgetType,
-      model: PitcherModel.new,
-      widget: Pitcher.new,
-      fromJson: PitcherModel.fromJson,
-      minWidth: _normalSize,
-      minHeight: _normalSize,
     );
 
     registerSingleTopic(
