@@ -1,3 +1,4 @@
+import 'package:elastic_dashboard/widgets/nt_widgets/multi_topic/pitcher.dart';
 import 'package:flutter/material.dart';
 
 import 'package:dot_cast/dot_cast.dart';
@@ -104,6 +105,14 @@ class NTWidgetRegistry {
       model: BooleanBoxModel.new,
       widget: BooleanBox.new,
       fromJson: BooleanBoxModel.fromJson,
+    );
+    registerSingleTopic(
+      name: Pitcher.widgetType,
+      model: PitcherModel.new,
+      widget: Pitcher.new,
+      fromJson: PitcherModel.fromJson,
+      minWidth: _normalSize,
+      minHeight: _normalSize,
     );
 
     registerSingleTopic(

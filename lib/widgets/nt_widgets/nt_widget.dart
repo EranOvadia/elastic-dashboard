@@ -354,8 +354,13 @@ class MultiTopicNTWidgetModel extends NTWidgetModel {
   @override
   List<String> getAvailableDisplayTypes() {
     if (type == ComboBoxChooser.widgetType ||
-        type == SplitButtonChooser.widgetType) {
-      return [ComboBoxChooser.widgetType, SplitButtonChooser.widgetType];
+        type == SplitButtonChooser.widgetType ||
+        type == 'Coral Level') {
+      return [
+        ComboBoxChooser.widgetType,
+        SplitButtonChooser.widgetType,
+        'Coral Level',
+      ];
     }
 
     return [type];
