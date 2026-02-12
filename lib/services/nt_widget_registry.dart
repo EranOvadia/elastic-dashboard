@@ -1,3 +1,4 @@
+import 'package:elastic_dashboard/widgets/nt_widgets/multi_topic/coral_level_chooser.dart';
 import 'package:elastic_dashboard/widgets/nt_widgets/multi_topic/pitcher.dart';
 import 'package:flutter/material.dart';
 
@@ -209,6 +210,13 @@ class NTWidgetRegistry {
       widget: ComboBoxChooser.new,
       fromJson: ComboBoxChooserModel.fromJson,
       minHeight: _normalSize * 0.85,
+    );
+    registerMultiTopic(
+      name: CoralLevelChooser.widgetType,
+      model: CoralLevelChooserModel.new,
+      widget: CoralLevelChooser.new,
+      fromJson: CoralLevelChooserModel.fromJson,
+      minHeight: _normalSize * 0.9,
     );
 
     registerMultiTopic(

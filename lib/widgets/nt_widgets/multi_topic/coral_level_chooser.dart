@@ -267,7 +267,10 @@ class CoralLevelChooser extends NTWidget {
           String key = event.data.keyLabel;
           print('Key pressed: $key'); // Debug print
 
-          if (key == '1') {
+          if (key == '0') {
+            print('Jumping to level 0'); // Debug print
+            model.jumpToLevel(0);
+          } else if (key == '1') {
             print('Jumping to level 1'); // Debug print
             model.jumpToLevel(1);
           } else if (key == '2') {
@@ -276,9 +279,6 @@ class CoralLevelChooser extends NTWidget {
           } else if (key == '3') {
             print('Jumping to level 3'); // Debug print
             model.jumpToLevel(3);
-          } else if (key == '4') {
-            print('Jumping to level 4'); // Debug print
-            model.jumpToLevel(4);
           }
         }
       },
