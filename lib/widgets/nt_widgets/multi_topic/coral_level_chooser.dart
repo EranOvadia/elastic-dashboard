@@ -350,7 +350,7 @@ class _CoralLevel extends StatelessWidget {
               Colors.red,
               () => onValueChanged(-1),
             ),
-            Text("L" + (selected ?? ''), textScaleFactor: 3),
+            Text((selected ?? ''), textScaleFactor: 3),
             _createIncrementDicrementButton(
               Icons.add,
               Colors.green,

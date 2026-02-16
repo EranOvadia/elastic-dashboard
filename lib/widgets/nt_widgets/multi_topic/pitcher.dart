@@ -14,10 +14,11 @@ class Pitcher extends NTWidget {
   Widget build(BuildContext context) {
     // Use read instead of watch at the top level
     PitcherModel model = cast(context.watch<NTWidgetModel>());
-
     return ListenableBuilder(
       listenable: model.subscription!,
       builder: (context, _) {
+            double angleDeg = model.pitcherAngle * 180 / math.pi;
+
         return LayoutBuilder(
           builder: (context, constraints) {
             // Use the full available space
@@ -51,7 +52,7 @@ class Pitcher extends NTWidget {
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text(
-                            '${model.pitcherAngle.toStringAsFixed(1)}°',
+                            '${angleDeg.toStringAsFixed(1)}°' ,
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: math.min(height * 0.5, 48),
@@ -104,7 +105,6 @@ class PitcherModel extends SingleTopicNTWidgetModel {
   @override
   List<Widget> getEditProperties(BuildContext context) => [];
 }
-
 class LinePainter extends CustomPainter {
   final PitcherModel model;
 
@@ -113,13 +113,11 @@ class LinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius =
-        math.min(size.width, size.height) * 0.9; // Reduced for padding
+    final radius = math.min(size.width, size.height) * 1 ;
 
     canvas.save();
     canvas.translate(center.dx, center.dy);
 
-    // Scale stroke width based on size
     final strokeWidth = math.max(2.0, radius * 0.08);
     final arcStrokeWidth = math.max(1.5, radius * 0.06);
 
@@ -135,25 +133,13 @@ class LinePainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
-    final paint2 = Paint()
-      ..color = Colors.green
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
+    // Input is in radians, adjust by 90 degrees (π/2 radians) to make 0° horizontal
+    final double angleRad = model.pitcherAngle - (math.pi / 2);
 
-    final arcPaint = Paint()
-      ..color = Colors.red
-      ..strokeWidth = arcStrokeWidth
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    final double angleRad = model.pitcherAngle * math.pi / 180;
-
-    // Draw the lines
-    final startPoint = Offset(size.width * 0.2, size.height * 0.47);
+    final startPoint = Offset(size.width * 0.35, size.height * 0.25);
     final endPoint = Offset(
       -radius * math.cos(angleRad) + startPoint.dx,
-      -radius * math.sin(angleRad) + startPoint.dy,
+      radius * math.sin(angleRad) + startPoint.dy,
     );
     final horizontalEnd = Offset(-radius + startPoint.dx, startPoint.dy);
 
@@ -163,17 +149,16 @@ class LinePainter extends CustomPainter {
     // Draw horizontal reference line
     canvas.drawLine(startPoint, horizontalEnd, paint);
 
-    final arcRadius = radius * 1; // Smaller arc for better visibility
     final arcRect = Rect.fromCircle(
       center: Offset(startPoint.dx, startPoint.dy),
-      radius: arcRadius,
+      radius: radius,
     );
 
-    // Arc from horizontal to the pitcher angle
+    // Arc from horizontal upward to the pitcher angle
     canvas.drawArc(
       arcRect,
-      math.pi, // Start at horizontal left
-      angleRad, // Sweep to the pitcher angle
+      math.pi,      // Start at horizontal left (π radians = 180°)
+      -angleRad,    // Negative sweep to flip arc upward
       false,
       paint,
     );
@@ -183,8 +168,6 @@ class LinePainter extends CustomPainter {
 
     // Draw end point
     canvas.drawCircle(endPoint, strokeWidth, paint1);
-
-    // Draw the arc
 
     canvas.restore();
   }
