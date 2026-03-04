@@ -107,14 +107,6 @@ class NTWidgetRegistry {
       widget: BooleanBox.new,
       fromJson: BooleanBoxModel.fromJson,
     );
-    registerSingleTopic(
-      name: Pitcher.widgetType,
-      model: PitcherModel.new,
-      widget: Pitcher.new,
-      fromJson: PitcherModel.fromJson,
-      minWidth: _normalSize,
-      minHeight: _normalSize,
-    );
 
     registerSingleTopic(
       name: GraphWidget.widgetType,
@@ -190,6 +182,14 @@ class NTWidgetRegistry {
       minHeight: _normalSize * 2,
       defaultWidth: 2,
       defaultHeight: 2,
+    );
+    registerMultiTopic(
+      name: Pitcher.widgetType,
+      model: PitcherModel.new,
+      widget: Pitcher.new,
+      fromJson: PitcherModel.fromJson,
+      minWidth: _normalSize,
+      minHeight: _normalSize,
     );
 
     registerMultiTopic(
